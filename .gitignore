@@ -31,6 +31,12 @@ __pycache__/
 # 忽略Jupyter Notebook生成的文件
 .ipynb_checkpoints/
 
+# 忽略PyCharm的配置文件和缓存文件
+.idea/
+*.iml
+*.iws
+*.ids
+*.code-workspace
 
 # 忽略环境文件
 .env
