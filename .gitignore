@@ -21,8 +21,8 @@ __pycache__/
 *.log
 
 # 忽略数据集文件
-/dataset/**/LICENSE
-/dataset/**/README.md
+/data/**/LICENSE
+/data/**/README.md
 *.csv
 
 # 忽略模型文件

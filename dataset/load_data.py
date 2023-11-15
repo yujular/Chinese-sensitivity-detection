@@ -8,7 +8,18 @@ from transformers import BertTokenizerFast
 
 # 定义自定义数据集类
 class COLDataset(Dataset):
-    def __init__(self, args, max_length=128):
+    def __init__(self, args, datatype, max_length=128):
+        r"""
+           COLDataset
+           Args:
+                args(`dict`):
+                    config.yml配置参数
+                datatype(`str`):
+                    train, dev, test, train/dev, all
+                max_length(`int`):
+                    token最大长度
+        """
+
         self.args = args
 
         self.root_path = args.dataset['dataset_root_path']
@@ -28,14 +39,18 @@ class COLDataset(Dataset):
 
         # 加载数据, train/dev:32157, test: 5323, total: 37480
         self.data = {'topic': [], 'label': [], 'text': [], 'length': 0}
-        self.load_data()
+        self.load_data(datatype)
 
-    def load_data(self, train: bool = True):
-        if train:
+    def load_data(self, datatype):
+        if datatype == 'all':
+            self._load_data(os.path.join(self.path, 'train.csv'))
+            self._load_data(os.path.join(self.path, 'dev.csv'))
+            self._load_data(os.path.join(self.path, 'test.csv'))
+        elif datatype == 'train/dev':
             self._load_data(os.path.join(self.path, 'train.csv'))
             self._load_data(os.path.join(self.path, 'dev.csv'))
         else:
-            self._load_data(os.path.join(self.path, 'test.csv'))
+            self._load_data(os.path.join(self.path, datatype + '.csv'))
 
     def _load_data(self, filename):
         dataframe = pd.read_csv(filename)
@@ -79,9 +94,10 @@ def test_data():
     import config
     args = config.load_args('../config/config.yml')
 
-    data = COLDataset(args)
+    data = COLDataset(args, 'dev')
     print(data.__getitem__(0))
 
 
 if __name__ == '__main__':
     test_data()
+    # test_data()

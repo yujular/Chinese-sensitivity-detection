@@ -1,6 +1,6 @@
 # 模型全局设置
 model:
-  model_root_path: "../model"
+  model_root_path: 'model'
   model_name: "bert-base-chinese"
 
 # 训练参数
@@ -9,6 +9,6 @@ train:
 
 # 数据集
 dataset:
-  dataset_root_path: "../data"
+  dataset_root_path: 'data'
   dataset_name: "COLDataset"
   class_num: 2
