@@ -1,11 +1,40 @@
 # 模型全局设置
 model:
   model_root_path: 'model'
+  model_type: "bert-base-linear"
   model_name: "bert-base-chinese"
+  hugging_face: False
+  freezing: False
+  hidden_size: 768
+
+  dropout: True
+  dropout_rate: 0.1
 
 # 训练参数
 train:
+  # device
   device: "cpu"
+  n_gpu: 0
+
+  # hyperparameters
+  num_epoch: 20
+  seed: 3407
+  batch_size: 32
+  gradient_accumulation_steps: 1
+  "max_grad_norm": 1.0e-3
+
+  # optimizer
+  optimizer: 'AdamW'
+  lr: 1.0e-5
+
+  # scheduler
+  scheduler: 'WarmUpLinear'
+  num_warmup_steps: 2000
+
+  # outputs
+  log_path: 'outputs/logger'
+  model_out_path: 'outputs/model'
+
 
 # 数据集
 dataset:

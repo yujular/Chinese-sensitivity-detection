@@ -18,6 +18,15 @@ class COLDataset(Dataset):
                     train, dev, test, train/dev, all
                 max_length(`int`):
                     token最大长度
+
+            Returns:
+                each record: a dict of {input_ids, attention_mask, label}
+                input_ids(`torch.tensor`):
+                    token id
+                attention_mask(`torch.tensor`):
+                    mask
+                labels(`torch.tensor`):
+                    标签
         """
 
         self.args = args
@@ -92,7 +101,7 @@ class COLDataset(Dataset):
 def test_data():
     """ test CLODataset """
     import config
-    args = config.load_args('../config/config.yml')
+    args = config.load_args('config/config.yml')
 
     data = COLDataset(args, 'dev')
     print(data.__getitem__(0))
@@ -100,4 +109,3 @@ def test_data():
 
 if __name__ == '__main__':
     test_data()
-    # test_data()
