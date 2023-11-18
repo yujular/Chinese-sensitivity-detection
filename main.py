@@ -1,7 +1,6 @@
+import numpy as np
 import os
 import random
-
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -26,10 +25,12 @@ MODEL_MAP = {
 if __name__ == '__main__':
     # 传入config.yml文件的路径作为参数
     args = load_args("config/config.yml")
+    print(args)
 
     # 设置随机种子
     initRandom(args.train['seed'])
 
+    print("Loading data...")
     # 创建数据集
     train_dataset = COLDataset(args, datatype='train')
     dev_dataset = COLDataset(args, datatype='dev')

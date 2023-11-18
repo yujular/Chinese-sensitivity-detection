@@ -40,7 +40,8 @@ class COLDataset(Dataset):
         # 加载tokenizer, 自动添加CLS, SEP
         self.vocab = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'], 'vocab.txt')
         if self.model == 'bert-base-chinese':
-            self.tokenizer = BertTokenizerFast.from_pretrained(self.model, add_special_tokens=True, do_lower_case=True,
+            model_path = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'])
+            self.tokenizer = BertTokenizerFast.from_pretrained(model_path, add_special_tokens=True, do_lower_case=True,
                                                                do_basic_tokenize=True)
         else:
             # from vocab.txt

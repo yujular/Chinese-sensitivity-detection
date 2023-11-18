@@ -112,7 +112,7 @@ class Trainer:
             accuracy and f1 score
         """
         predictions, labels = get_prediction(model=self.model, data_loader=self.data_loader[dataset_type],
-                                             device=self.args.train['device'], class_num=self.args.model['class_num'])
+                                             device=self.args.train['device'], class_num=self.args.dataset['class_num'])
         accuracy, f1 = calculate_accuracy_f1(labels, predictions, class_num=self.args.model['class_num'])
         return accuracy, f1
 
