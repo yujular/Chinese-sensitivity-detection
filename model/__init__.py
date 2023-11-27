@@ -1,3 +1,5 @@
-import model.bert
+from . import bert
+from . import model
 
-BertBaseModel = model.bert.BertBaseModel
+BertBaseModel = bert.BertBaseModel
+Model = model.Model
