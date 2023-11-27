@@ -1,22 +1,12 @@
-import numpy as np
 import os
-import random
+
 import torch
 from torch.utils.data import DataLoader
 
 from config import load_args
 from dataset import COLDataset
 from model import BertBaseModel
-from utils import Trainer
-
-
-def initRandom(seed):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    random.seed(seed)
-    torch.backends.cudnn.deterministic = True  # 保证每次结果一样
-
+from utils import Trainer, initRandom
 
 MODEL_MAP = {
     'bert-base-linear': BertBaseModel
@@ -34,12 +24,12 @@ if __name__ == '__main__':
     # 创建数据集
     train_dataset = COLDataset(args, datatype='train')
     dev_dataset = COLDataset(args, datatype='dev')
-    test_dataset = COLDataset(args, datatype='test')
+    # test_dataset = COLDataset(args, datatype='test')
 
     # 创建数据加载器
     train_loader = DataLoader(train_dataset, batch_size=args.train['batch_size'], shuffle=True)
     dev_loader = DataLoader(dev_dataset, batch_size=args.train['batch_size'], shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=args.train['batch_size'], shuffle=False)
+    # test_loader = DataLoader(test_dataset, batch_size=args.train['batch_size'], shuffle=False)
 
     # 加载模型
     # model = MODEL_MAP[args.model['model_type']](args)
@@ -55,4 +45,6 @@ if __name__ == '__main__':
     best_model_state_dict = trainer.train()
     # 保存模型
     torch.save(best_model_state_dict,
-               os.path.join(args.train['model_save_path'], args.model['model_name'] + 'model.bin'))
+               os.path.join(args.train['model_out_path'],
+                            args.dataset['class_num'],
+                            args.model['model_name'] + 'model.bin'))
