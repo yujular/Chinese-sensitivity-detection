@@ -27,7 +27,7 @@ __pycache__/
 
 # 忽略模型文件
 /model/**/config.json
-/model/**/pytorch_model.bin
+*.bin
 /model/**/vocab.txt
 
 # 忽略Jupyter Notebook生成的文件
