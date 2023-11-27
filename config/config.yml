@@ -13,11 +13,11 @@ model:
 # 训练参数
 train:
   # device
-  device: "cpu"
-  n_gpu: 0
+  device: "cuda"
+  n_gpu: 1
 
   # hyperparameters
-  num_epoch: 10
+  num_epoch: 20
   seed: 3407
   batch_size: 32
   gradient_accumulation_steps: 1
@@ -25,11 +25,11 @@ train:
 
   # optimizer
   optimizer: 'AdamW'
-  lr: 1.0e-5
+  lr: 2.0e-5
 
   # scheduler
-  scheduler: 'WarmUpLinear'
-  num_warmup_steps: 2000
+  scheduler: 'constant'
+  num_warmup_steps: 200
 
   # outputs
   log_path: 'outputs/logger'
@@ -40,4 +40,6 @@ train:
 dataset:
   dataset_root_path: 'data'
   dataset_name: "COLDataset"
-  class_num: 2
+
+  class_num: 6
+  multi_class: True

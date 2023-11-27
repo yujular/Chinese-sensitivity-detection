@@ -1,3 +1,4 @@
+import gc
 import os
 from copy import deepcopy
 
@@ -56,7 +57,8 @@ class Trainer:
         """
         if optimizer_name.casefold() == 'adamw':
             # bias, gamma, beta 参数不参与训练, 其余权重0.01
-            no_decay = ['bias', 'gamma', 'beta']
+            # no_decay = ['bias', 'gamma', 'beta']
+            no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
             optimizer_parameters = [
                 {'params': [p for n, p in self.model.named_parameters()
                             if not any(nd in n for nd in no_decay)],
@@ -112,8 +114,8 @@ class Trainer:
             accuracy and f1 score
         """
         predictions, labels = get_prediction(model=self.model, data_loader=self.data_loader[dataset_type],
-                                             device=self.args.train['device'], class_num=self.args.dataset['class_num'])
-        accuracy, f1 = calculate_accuracy_f1(labels, predictions, class_num=self.args.model['class_num'])
+                                             device=self.args.train['device'])
+        accuracy, f1 = calculate_accuracy_f1(labels, predictions, class_num=self.args.dataset['class_num'])
         return accuracy, f1
 
     def train(self):
@@ -125,7 +127,8 @@ class Trainer:
 
         best_model_state_dict, best_dev_f1, global_step = None, 0, 0
 
-        for epoch in trange(self.args.train['num_epoch'], desc='Epoch', ncols=120):
+        tqdm_epoch = trange(self.args.train['num_epoch'], desc='Epoch', ncols=120)
+        for epoch in tqdm_epoch:
             self.model.train()
 
             tqdm_train = tqdm(self.data_loader['train'], ncols=80)
@@ -137,11 +140,11 @@ class Trainer:
                 model_out = self.model(input_ids, input_mask)
                 # 计算损失
                 loss = self.criterion(model_out, label)
-                loss.backward()
                 if self.args.train['gradient_accumulation_steps'] > 1:
                     loss = loss / self.args.train['gradient_accumulation_steps']
 
                 self.optimizer.zero_grad()
+                loss.backward()
 
                 if (step + 1) % self.args.train['gradient_accumulation_steps'] == 0:
                     torch.nn.utils.clip_grad_norm_(
@@ -156,16 +159,22 @@ class Trainer:
             train_accuracy, train_f1 = self._evaluate('train')
             dev_accuracy, dev_f1 = self._evaluate('dev')
             epoch_log(epoch + 1, (train_accuracy, train_f1, dev_accuracy, dev_f1), self.epoch_logger)
-            tqdm_train.set_description(
+            tqdm_epoch.set_description(
                 'Epoch: {:d}, train_acc: {:.6f}, train_f1: {:.6f}, '
                 'valid_acc: {:.6f}, valid_f1: {:.6f}, '.format(
                     epoch, train_accuracy, train_f1, dev_accuracy, dev_f1))
             # 保存模型
             self.save_model(os.path.join(
-                self.args.train['model_save_path'],
+                self.args.train['model_out_path'],
+                self.args.dataset['class_num'],
                 self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin'))
 
             if dev_f1 > best_dev_f1:
                 best_model_state_dict = deepcopy(self.model.state_dict())
                 best_dev_f1 = dev_f1
+            # 清除内存
+            if self.args.train['device'] == 'cuda':
+                gc.collect()
+                torch.cuda.empty_cache()
+
         return best_model_state_dict

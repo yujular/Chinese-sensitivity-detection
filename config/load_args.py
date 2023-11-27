@@ -1,5 +1,6 @@
 import argparse
 
+import torch.cuda
 import yaml
 
 
@@ -7,6 +8,13 @@ def load_args(config_file):
     # 从config.yml文件中加载参数
     with open(config_file, 'r', encoding='utf-8') as config_stream:
         config = yaml.safe_load(config_stream)
+
+    if torch.cuda.is_available():
+        config['train']['device'] = 'cuda'
+        config['train']['n_gpu'] = torch.cuda.device_count()
+    else:
+        config['train']['device'] = 'cpu'
+        config['train']['n_gpu'] = 0
 
     # 创建一个ArgumentParser对象
     parser = argparse.ArgumentParser(description='Args base on config.yml')
