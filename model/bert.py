@@ -73,3 +73,21 @@ class BertBaseModel(nn.Module):
         # softmax
         outs = nn.functional.softmax(logits, dim=-1)
         return outs
+
+    def get_cls_feature(self, input_ids, attention_mask):
+        """Get cls feature for visualization.
+
+        Args:
+            input_ids: (batch_size, max_seq_len)
+            attention_mask: (batch_size, max_seq_len)
+        """
+        bert_output = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            encoder_hidden_states=False)
+        pooled_output = bert_output[1]
+        # dropout
+        if self.args.model['dropout']:
+            pooled_output = self.dropout(pooled_output)
+
+        return pooled_output
