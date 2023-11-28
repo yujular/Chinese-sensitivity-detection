@@ -11,6 +11,7 @@ from transformers import get_linear_schedule_with_warmup, get_constant_schedule_
 
 from utils.evaluate import get_prediction, calculate_accuracy_f1
 from utils.logger import step_log, get_csv_logger, epoch_log
+from utils.utils import AverageMeter
 
 
 class Trainer:
@@ -98,11 +99,14 @@ class Trainer:
 
         return scheduler
 
-    def save_model(self, filename):
+    def save_model(self, path, filename):
         """Save model to filename.
         Args:
-            filename: str, path to save model
+            :param filename: str, filename to save model
+            :param path: str, path to save model
         """
+        os.makedirs(path, exist_ok=True)
+        filename = os.path.join(path, filename)
         torch.save(self.model.state_dict(), filename)
 
     def _evaluate(self, dataset_type):
@@ -126,6 +130,7 @@ class Trainer:
         """
 
         best_model_state_dict, best_dev_f1, global_step = None, 0, 0
+        best_epoch = 0
 
         tqdm_epoch = trange(self.args.train['num_epoch'], desc='Epoch', ncols=120)
         for epoch in tqdm_epoch:
@@ -166,15 +171,94 @@ class Trainer:
             # 保存模型
             self.save_model(os.path.join(
                 self.args.train['model_out_path'],
-                self.args.dataset['class_num'],
-                self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin'))
+                'class-' + str(self.args.dataset['class_num'])),
+                self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin')
 
             if dev_f1 > best_dev_f1:
                 best_model_state_dict = deepcopy(self.model.state_dict())
                 best_dev_f1 = dev_f1
+                best_epoch = epoch + 1
             # 清除内存
             if self.args.train['device'] == 'cuda':
                 gc.collect()
                 torch.cuda.empty_cache()
 
-        return best_model_state_dict
+        return best_model_state_dict, best_epoch
+
+
+class TransferTrainer(Trainer):
+    def __init__(self, args, model, data_loader_source, data_loader_target):
+        super().__init__(args, model, data_loader_source)
+        self.data_loader_target = data_loader_target
+
+    def train(self):
+        len_source_loader = len(self.data_loader)
+        len_target_loader = len(self.data_loader_target)
+        n_batch = min(len_source_loader, len_target_loader)
+
+        best_model_state_dict, best_dev_f1, global_step = None, 0, 0
+        best_epoch = 0
+
+        tqdm_epoch = trange(self.args.train['num_epoch'], desc='Epoch', ncols=120)
+        for epoch in tqdm_epoch:
+            self.model.train()
+
+            train_loss_clf = AverageMeter()
+            train_loss_transfer = AverageMeter()
+            train_loss_total = AverageMeter()
+
+            # model.epoch_based_processing(n_batch) # daan
+            iter_source, iter_target = iter(self.data_loader), iter(self.data_loader_target)
+
+            tqdm_train = tqdm(range(n_batch), ncols=80)
+            for step in tqdm_train:
+                data_source, label_source = next(iter_source)
+                data_target, label_target = next(iter_target)
+                data_source, label_source = (data_source.to(self.args.train['device']),
+                                             label_source.to(self.args.train['device']))
+                data_target, label_target = (data_target.to(self.args.train['device']),
+                                             label_target.to(self.args.train['device']))
+                source_clf_loss, target_clf_loss, transfer_loss = self.model(data_source, data_target, label_source,
+                                                                             label_target)
+                loss = source_clf_loss + target_clf_loss + self.args.train['transfer_loss_weight'] * transfer_loss
+
+                if self.args.train['gradient_accumulation_steps'] > 1:
+                    loss = loss / self.args.train['gradient_accumulation_steps']
+
+                self.optimizer.zero_grad()
+                loss.backward()
+
+                if (step + 1) % self.args.train['gradient_accumulation_steps'] == 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(), self.args.train['max_grad_norm'])
+                    self.optimizer.step()
+                    self.scheduler.step()
+                    global_step += 1
+                    tqdm_train.set_description('Train loss: {:.6f}'.format(loss.item()), refresh=False)
+                    step_log(global_step, loss, self.step_logger)
+            # 每个epoch结束后在train和dev上评估
+
+            train_accuracy, train_f1 = self._evaluate('train')
+            dev_accuracy, dev_f1 = self._evaluate('dev')
+
+            epoch_log(epoch + 1, (train_accuracy, train_f1, dev_accuracy, dev_f1), self.epoch_logger)
+            tqdm_epoch.set_description(
+                'Epoch: {:d}, train_acc: {:.6f}, train_f1: {:.6f}, '
+                'valid_acc: {:.6f}, valid_f1: {:.6f}, '.format(
+                    epoch, train_accuracy, train_f1, dev_accuracy, dev_f1))
+            # 保存模型
+            self.save_model(os.path.join(
+                self.args.train['model_out_path'],
+                'class-' + str(self.args.dataset['class_num'])),
+                self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin')
+
+            if dev_f1 > best_dev_f1:
+                best_model_state_dict = deepcopy(self.model.state_dict())
+                best_dev_f1 = dev_f1
+                best_epoch = epoch + 1
+            # 清除内存
+            if self.args.train['device'] == 'cuda':
+                gc.collect()
+                torch.cuda.empty_cache()
+
+        return best_model_state_dict, best_epoch

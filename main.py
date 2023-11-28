@@ -42,9 +42,10 @@ if __name__ == '__main__':
     # 训练模型
     train_dataloader = {'train': train_loader, 'dev': dev_loader}
     trainer = Trainer(args, model, train_dataloader)
-    best_model_state_dict = trainer.train()
+    best_model_state_dict, best_epoch = trainer.train()
     # 保存模型
+    print("best epoch: {}".format(best_epoch))
     torch.save(best_model_state_dict,
                os.path.join(args.train['model_out_path'],
-                            args.dataset['class_num'],
+                            'class-' + str(args.dataset['class_num']),
                             args.model['model_name'] + 'model.bin'))
