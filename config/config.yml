@@ -28,12 +28,15 @@ train:
   lr: 2.0e-5
 
   # scheduler
-  scheduler: 'constant'
+  scheduler: 'warmuplinear'
   num_warmup_steps: 200
 
   # outputs
   log_path: 'outputs/logger'
   model_out_path: 'outputs/model'
+
+  # transfer
+  transfer_loss_weight: 0.5
 
 
 # 数据集
