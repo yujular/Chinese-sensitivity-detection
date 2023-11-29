@@ -9,7 +9,8 @@ from tqdm import tqdm, trange
 from transformers import get_linear_schedule_with_warmup, get_constant_schedule_with_warmup, \
     get_constant_schedule
 
-from utils.evaluate import get_prediction, calculate_accuracy_f1
+from utils import save_model
+from utils.evaluate import get_prediction, calculate_accuracy_f1, get_trans_prediction
 from utils.logger import step_log, get_csv_logger, epoch_log
 from utils.utils import AverageMeter
 
@@ -188,12 +189,12 @@ class Trainer:
 
 class TransferTrainer(Trainer):
     def __init__(self, args, model, data_loader_source, data_loader_target):
-        super().__init__(args, model, data_loader_source)
-        self.data_loader_target = data_loader_target
+        super().__init__(args, model, data_loader_target)
+        self.data_loader_source = data_loader_source
 
     def train(self):
-        len_source_loader = len(self.data_loader)
-        len_target_loader = len(self.data_loader_target)
+        len_source_loader = len(self.data_loader_source)
+        len_target_loader = len(self.data_loader['train'])
         n_batch = min(len_source_loader, len_target_loader)
 
         best_model_state_dict, best_dev_f1, global_step = None, 0, 0
@@ -208,18 +209,24 @@ class TransferTrainer(Trainer):
             train_loss_total = AverageMeter()
 
             # model.epoch_based_processing(n_batch) # daan
-            iter_source, iter_target = iter(self.data_loader), iter(self.data_loader_target)
+            iter_source, iter_target = iter(self.data_loader_source), iter(self.data_loader['train'])
 
             tqdm_train = tqdm(range(n_batch), ncols=80)
             for step in tqdm_train:
-                data_source, label_source = next(iter_source)
-                data_target, label_target = next(iter_target)
-                data_source, label_source = (data_source.to(self.args.train['device']),
-                                             label_source.to(self.args.train['device']))
-                data_target, label_target = (data_target.to(self.args.train['device']),
-                                             label_target.to(self.args.train['device']))
-                source_clf_loss, target_clf_loss, transfer_loss = self.model(data_source, data_target, label_source,
-                                                                             label_target)
+                data_source_id, data_source_mask, label_source = next(iter_source).values()
+                data_target_id, data_target_mask, label_target = next(iter_target).values()
+                data_source_id, data_source_mask, label_source = (data_source_id.to(self.args.train['device']),
+                                                                  data_source_mask.to(self.args.train['device']),
+                                                                  label_source.to(self.args.train['device']))
+                data_target_id, data_target_mask, label_target = (data_target_id.to(self.args.train['device']),
+                                                                  data_target_mask.to(self.args.train['device']),
+                                                                  label_target.to(self.args.train['device']))
+                # 拼接BERT模型输入
+                data_source = {'input_ids': data_source_id, 'attention_mask': data_source_mask}
+                data_target = {'input_ids': data_target_id, 'attention_mask': data_target_mask}
+
+                source_clf_loss, target_clf_loss, transfer_loss = self.model(data_source, data_target,
+                                                                             label_source, label_target)
                 loss = source_clf_loss + target_clf_loss + self.args.train['transfer_loss_weight'] * transfer_loss
 
                 if self.args.train['gradient_accumulation_steps'] > 1:
@@ -233,6 +240,11 @@ class TransferTrainer(Trainer):
                         self.model.parameters(), self.args.train['max_grad_norm'])
                     self.optimizer.step()
                     self.scheduler.step()
+
+                    train_loss_clf.update(target_clf_loss.item())
+                    train_loss_transfer.update(transfer_loss.item())
+                    train_loss_total.update(loss.item())
+
                     global_step += 1
                     tqdm_train.set_description('Train loss: {:.6f}'.format(loss.item()), refresh=False)
                     step_log(global_step, loss, self.step_logger)
@@ -247,10 +259,11 @@ class TransferTrainer(Trainer):
                 'valid_acc: {:.6f}, valid_f1: {:.6f}, '.format(
                     epoch, train_accuracy, train_f1, dev_accuracy, dev_f1))
             # 保存模型
-            self.save_model(os.path.join(
-                self.args.train['model_out_path'],
-                'class-' + str(self.args.dataset['class_num'])),
-                self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin')
+            save_path = os.path.join(self.args.train['model_out_path'],
+                                     'transfer',
+                                     'class-' + str(self.args.dataset['class_num']))
+            model_name = self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin'
+            save_model(model_dict=self.model.state_dict(), path=save_path, filename=model_name)
 
             if dev_f1 > best_dev_f1:
                 best_model_state_dict = deepcopy(self.model.state_dict())
@@ -262,3 +275,13 @@ class TransferTrainer(Trainer):
                 torch.cuda.empty_cache()
 
         return best_model_state_dict, best_epoch
+
+    def _evaluate(self, dataset_type):
+        """Evaluate model and get acc and f1 score in target domain.
+        Args:
+            dataset_type: str, 'train' or 'dev'
+        """
+        predictions, labels = get_trans_prediction(model=self.model, data_loader=self.data_loader[dataset_type],
+                                                   device=self.args.train['device'])
+        accuracy, f1 = calculate_accuracy_f1(labels, predictions, class_num=self.args.dataset['class_num'])
+        return accuracy, f1

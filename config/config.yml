@@ -37,6 +37,7 @@ train:
 
   # transfer
   transfer_loss_weight: 0.5
+  transfer_loss: 'mmd'
 
 
 # 数据集
@@ -45,5 +46,5 @@ dataset:
   dataset_name: "COLDataset"
   OLID_name: "OLID"
 
-  class_num: 6
-  multi_class: True
+  class_num: 2
+  multi_class: False

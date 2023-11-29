@@ -5,13 +5,13 @@ from loss import TransferLoss
 
 
 class TransferNet(nn.Module):
-    def __init__(self, args, class_num, base_net,
+    def __init__(self, args, base_net,
                  transfer_loss='mmd', use_bottleneck=True,
                  bottleneck_width=256, max_iter=1000):
         super(TransferNet, self).__init__()
 
         self.args = args
-        self.class_num = class_num
+        self.class_num = self.args.dataset['class_num']
         self.base_net = base_net
         self.transfer_loss = transfer_loss
         self.use_bottleneck = use_bottleneck
@@ -21,7 +21,7 @@ class TransferNet(nn.Module):
         # 瓶颈层配置
         if self.use_bottleneck:
             bottleneck_list = [
-                nn.Linear(self.base_net.output_num(), self.bottleneck_width),
+                nn.Linear(self.base_net.feature_num(), self.bottleneck_width),
                 nn.ReLU()
             ]
             self.bottleneck_layer = nn.Sequential(*bottleneck_list)
@@ -40,8 +40,13 @@ class TransferNet(nn.Module):
         self.adapt_loss = TransferLoss(**transfer_loss_args)
 
     def forward(self, source, target, source_label, target_label=None):
-        source = self.base_net.get_cls_feature(source)
-        target = self.base_net.get_cls_feature(target)
+        source_id = source['input_ids']
+        source_mask = source['attention_mask']
+        target_id = target['input_ids']
+        target_mask = target['attention_mask']
+
+        source = self.base_net.get_cls_feature(source_id, source_mask)
+        target = self.base_net.get_cls_feature(target_id, target_mask)
 
         if self.use_bottleneck:
             source = self.bottleneck_layer(source)
@@ -50,14 +55,14 @@ class TransferNet(nn.Module):
         source_clf = self.classifier_layer(source)
         source_clf_loss = self.criterion(source_clf, source_label)
         target_clf = self.classifier_layer(target)
-        target_clf_loss = self.classifier_layer(target_clf, target_label)
+        target_clf_loss = self.criterion(target_clf, target_label)
 
         kwargs = {}
         if self.transfer_loss == "lmmd":
-            kwargs['source_label'] = source_label
-            kwargs['target_logits'] = target_label
             # 目标域无标签时采用预测标签
             # kwargs['target_logits'] = torch.nn.functional.softmax(target_clf, dim=1)
+            kwargs['source_label'] = source_label
+            kwargs['target_logits'] = target_label
         # elif self.transfer_loss == "daan":
         #     source_clf = self.classifier_layer(source)
         #     kwargs['source_logits'] = torch.nn.functional.softmax(source_clf, dim=1)
@@ -70,7 +75,10 @@ class TransferNet(nn.Module):
         return source_clf_loss, target_clf_loss, transfer_loss
 
     def predict(self, x):
-        features = self.base_network.get_cls_feature(x)
+        input_ids = x['input_ids']
+        attention_mask = x['attention_mask']
+
+        features = self.base_net.get_cls_feature(input_ids, attention_mask)
         if self.use_bottleneck:
             features = self.bottleneck_layer(features)
         clf = self.classifier_layer(features)

@@ -44,6 +44,23 @@ def get_prediction(model, data_loader, device, test=False):
         return answer, labels.to('cpu').numpy().tolist()
 
 
+def get_trans_prediction(model, data_loader, device, test=False):
+    model.eval()
+    outputs = torch.tensor([], dtype=torch.float).to(device)
+    labels = torch.tensor([], dtype=torch.long).to(device)
+
+    for batch in tqdm(data_loader, desc='Evaluation', ncols=80):
+        batch = tuple(t.to(device) for t in batch.values())
+        input_ids, input_mask, label = batch
+        with torch.no_grad():
+            inputs = {'input_ids': input_ids, 'attention_mask': input_mask}
+            outs = model.predict(inputs)
+        outputs = torch.cat((outputs, outs), dim=0)
+        labels = torch.cat((labels, label), dim=0)
+    answer = outputs.argmax(dim=1).tolist()
+    return answer, labels.to('cpu').numpy().tolist()
+
+
 def calculate_accuracy_f1(
         labels: List[str], predicts: List[str], class_num=2, average='macro') -> tuple:
     """Calculate accuracy and f1 score.
@@ -101,7 +118,7 @@ def evaluate_subcategory(
     acc_anti, f1_anti = calculate_accuracy_f1(anti_labels, anti_predicts, class_num, average)
     acc_non_offen, f1_non_offen = calculate_accuracy_f1(non_offen_labels, non_offen_predicts, class_num, average)
     return acc, f1, acc_I, f1_I, acc_G, f1_G, acc_anti, f1_anti, acc_non_offen, f1_non_offen
-    
+
 # def test_evaluate():
 #     args = load_args("config/config.yml")
 #     print(args)

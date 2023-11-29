@@ -23,6 +23,9 @@ __pycache__/
 # 忽略数据集文件
 /data/**/LICENSE
 /data/**/README.md
+/data/**/README.txt
+*.zip
+*.tsv
 *.csv
 
 # 忽略模型文件

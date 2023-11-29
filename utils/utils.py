@@ -1,3 +1,4 @@
+import os
 import random
 from collections import OrderedDict
 
@@ -59,3 +60,18 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+
+
+def save_model(model_dict, path, filename):
+    """Save model to file.
+
+       Args:
+            :param model_dict: model state dict
+            :param path: path to save model
+            :param filename: model file name
+
+    """
+    # os.makedirs(path, exist_ok=True)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    torch.save(model_dict, os.path.join(path, filename))

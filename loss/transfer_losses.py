@@ -1,15 +1,15 @@
 import torch.nn as nn
 
-from loss import *
-
 
 class TransferLoss(nn.Module):
     def __init__(self, loss_type, **kwargs):
         super(TransferLoss, self).__init__()
         self.loss_type = loss_type
         if loss_type == "mmd":
+            from loss.mmd import MMDLoss
             self.loss_func = MMDLoss(**kwargs)
         elif loss_type == "lmmd":
+            from loss.lmmd import LMMDLoss
             self.loss_func = LMMDLoss(**kwargs)
         # elif loss_type == "coral":
         #     self.loss_func = CORAL

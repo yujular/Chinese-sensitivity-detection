@@ -91,3 +91,6 @@ class BertBaseModel(nn.Module):
             pooled_output = self.dropout(pooled_output)
 
         return pooled_output
+
+    def feature_num(self):
+        return self.args.model['hidden_size']
