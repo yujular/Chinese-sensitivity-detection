@@ -27,6 +27,8 @@ __pycache__/
 *.zip
 *.tsv
 *.csv
+*.json
+*.txt
 
 # 忽略模型文件
 /model/**/config.json
