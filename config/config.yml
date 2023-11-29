@@ -43,6 +43,7 @@ train:
 dataset:
   dataset_root_path: 'data'
   dataset_name: "COLDataset"
+  OLID_name: "OLID"
 
   class_num: 6
   multi_class: True
