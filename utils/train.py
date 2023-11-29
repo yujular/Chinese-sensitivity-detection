@@ -9,10 +9,9 @@ from tqdm import tqdm, trange
 from transformers import get_linear_schedule_with_warmup, get_constant_schedule_with_warmup, \
     get_constant_schedule
 
-from utils import save_model
 from utils.evaluate import get_prediction, calculate_accuracy_f1, get_trans_prediction
 from utils.logger import step_log, get_csv_logger, epoch_log
-from utils.utils import AverageMeter
+from utils.utils import AverageMeter, save_model
 
 
 class Trainer:

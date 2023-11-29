@@ -5,9 +5,8 @@ from torch.utils.data import DataLoader
 
 from config import load_args
 from dataset import load_dataset
-from model import Model, TransferNet
+from model import TransferNet, get_trained_model
 from utils import initRandom, TransferTrainer, save_model
-from utils.utils import load_torch_model
 
 if __name__ == '__main__':
     # 传入config.yml文件的路径作为参数
@@ -30,12 +29,13 @@ if __name__ == '__main__':
 
     # 加载基础模型
     print("Loading model...")
-    model = Model(args).get_model()
-    model_path = os.path.join(args.train['model_out_path'],
-                              'class-' + str(args.dataset['class_num']),
-                              args.model['model_name'] + 'model.bin')
-    print("Loading model from {}...".format(model_path))
-    model = load_torch_model(model=model, model_path=model_path, device=args.train['device'], strict=True)
+    # model = Model(args).get_model()
+    # model_path = os.path.join(args.train['model_out_path'],
+    #                           'class-' + str(args.dataset['class_num']),
+    #                           args.model['model_name'] + 'model.bin')
+    # print("Loading model from {}...".format(model_path))
+    # model = load_torch_model(model=model, model_path=model_path, device=args.train['device'], strict=True)
+    model = get_trained_model(args, transfer=False)
     # 迁移模型
     model.to(args.train['device'])
     trans_model = TransferNet(args, model, transfer_loss=args.train['transfer_loss']).to(args.train['device'])

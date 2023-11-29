@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 
 # def get_prediction(model, data_loader, device, class_num) -> tuple[List[str], List[str]]:
-def get_prediction(model, data_loader, device, test=False):
+def get_prediction(model, data_loader, device, test=False, transfer=False):
     """Get model prediction on data_loader in device.
 
     Args:
@@ -31,7 +31,10 @@ def get_prediction(model, data_loader, device, test=False):
         else:
             input_ids, input_mask, label = batch
         with torch.no_grad():
-            outs = model(input_ids, input_mask)
+            if transfer:
+                outs = model.predict({'input_ids': input_ids, 'attention_mask': input_mask})
+            else:
+                outs = model(input_ids, input_mask)
         outputs = torch.cat((outputs, outs), dim=0)
         labels = torch.cat((labels, label), dim=0)
 
@@ -49,16 +52,27 @@ def get_trans_prediction(model, data_loader, device, test=False):
     outputs = torch.tensor([], dtype=torch.float).to(device)
     labels = torch.tensor([], dtype=torch.long).to(device)
 
+    # COLD, test
+    fine_grained_labels = torch.tensor([], dtype=torch.long).to(device)
+
     for batch in tqdm(data_loader, desc='Evaluation', ncols=80):
         batch = tuple(t.to(device) for t in batch.values())
-        input_ids, input_mask, label = batch
+        if test:
+            input_ids, input_mask, label, fine_grained_label = batch
+            fine_grained_labels = torch.cat((fine_grained_labels, fine_grained_label),
+                                            dim=0)
+        else:
+            input_ids, input_mask, label = batch
         with torch.no_grad():
             inputs = {'input_ids': input_ids, 'attention_mask': input_mask}
             outs = model.predict(inputs)
         outputs = torch.cat((outputs, outs), dim=0)
         labels = torch.cat((labels, label), dim=0)
     answer = outputs.argmax(dim=1).tolist()
-    return answer, labels.to('cpu').numpy().tolist()
+    if test:
+        return answer, labels.to('cpu').numpy().tolist(), fine_grained_labels.to('cpu').numpy().tolist()
+    else:
+        return answer, labels.to('cpu').numpy().tolist()
 
 
 def calculate_accuracy_f1(
