@@ -1,5 +1,4 @@
 import os
-
 import torch
 
 from model.bert import BertBaseModel
@@ -26,19 +25,28 @@ class Model:
         return model
 
 
-def get_trained_model(args, transfer=False):
+def get_trained_model(args, transfer=False, pretrained=False):
+    """
+    :param args:
+    :param transfer: if True, load transfer model
+    :param pretrained: if True, load pretrain model
+    :return:
+    """
     model = Model(args).get_model()
 
     if transfer:
         model = TransferNet(args, model, transfer_loss=args.train['transfer_loss']).to(args.train['device'])
+        model_name = args.model['model_name'] + 'model.bin'
         model_path = os.path.join(args.train['model_out_path'],
                                   'transfer',
+                                  args.train['transfer_dataset'] + '-' + args.train['transfer_loss'],
                                   'class-' + str(args.dataset['class_num']),
-                                  args.model['model_name'] + 'model.bin')
+                                  model_name)
     else:
         model_path = os.path.join(args.train['model_out_path'],
                                   'class-' + str(args.dataset['class_num']),
                                   args.model['model_name'] + 'model.bin')
-    print("Loading model from {}...".format(model_path))
-    model = load_torch_model(model=model, model_path=model_path, device=args.train['device'], strict=True)
+    if pretrained:
+        print("Loading model from {}...".format(model_path))
+        model = load_torch_model(model=model, model_path=model_path, device=args.train['device'], strict=True)
     return model
