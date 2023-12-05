@@ -16,7 +16,7 @@ if __name__ == '__main__':
     dataloader = get_dataloader(args.dataset['dataset_name'], args, datatypes=['dev', 'test'])
 
     # 加载模型
-    model = get_trained_model(args, transfer=True)
+    model = get_trained_model(args, transfer=True, pretrained=True)
 
     # 开发集预测
     ans, label = get_prediction(model, dataloader['dev'], args.train['device'], test=False, transfer=True)

@@ -116,14 +116,35 @@ class COLDataset(Dataset):
                 'labels': torch.tensor(label, dtype=torch.long)
             }
 
+    def __get_max_length__(self):
+        # 遍历所有文本，获取最大语句长度和对应index
+        max_length = 0
+        index = 0
+        for i, text in enumerate(self.data['text']):
+            if len(text) > max_length:
+                max_length = len(text)
+                index = i
+
+        return max_length, index
+
+    def get_truncation_num(self):
+        num = 0
+        for text in self.data['text']:
+            if len(text) > self.max_length:
+                num += 1
+        return num
+
 
 def test_COLD_data():
     """ test CLODataset """
     import config
     args = config.load_args('config/config.yml')
 
-    data = COLDataset(args, 'dev')
-    print(data.__getitem__(0))
+    data = COLDataset(args, 'all')
+    print(data.get_truncation_num())
+
+    data2 = COLDataset(args, 'test')
+    print(data2.get_truncation_num())
 
 
 if __name__ == '__main__':

@@ -76,7 +76,7 @@ def get_trans_prediction(model, data_loader, device, test=False):
 
 
 def calculate_accuracy_f1(
-        labels: List[str], predicts: List[str], class_num=2, average='macro') -> tuple:
+        labels: List[str], predicts: List[str], class_num=2, average='binary') -> tuple:
     """Calculate accuracy and f1 score.
 
     Args:
