@@ -9,6 +9,9 @@ def load_dataset(dataset_name, args, datatype='train'):
     elif dataset_name == 'OLID':
         from dataset.OLID import OLIDataset
         dataset = OLIDataset(args, datatype)
+    elif dataset_name == 'KOLD':
+        from dataset.KOLD import KOLDataset
+        dataset = KOLDataset(args, datatype)
     else:
         raise NotImplementedError
 

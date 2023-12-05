@@ -1,6 +1,7 @@
 import json
 import os
 
+import torch
 from torch.utils.data import Dataset
 from transformers import BertTokenizerFast
 
@@ -33,9 +34,10 @@ class KOLDataset(Dataset):
 
         self.args = args
 
-        self.root_path = args.dataset['dataset_root_path']
-        self.dataset_name = args.dataset['dataset_name']
-        self.path = os.path.join(self.root_path, self.dataset_name)
+        self.path = os.path.join(args.dataset['dataset_root_path'], args.dataset['KOLD_name'])
+        self.dataset_name = 'kold_v1.json'
+
+        self.path = os.path.join(self.path, self.dataset_name)
         self.model = args.model['model_name']
         self.max_length = max_length
 
@@ -77,21 +79,34 @@ class KOLDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    # def __getitem__(self, index):
-    # text = self.data[index]['text']
-    #
-    # # 使用 tokenizer 对文本进行标记化和编码
-    # inputs = self.tokenizer(
-    #     text,
-    #     padding='max_length',
-    #     truncation=True,
-    #     max_length=self.max_length,
-    #     return_tensors='pt'
-    # )
-    #
-    # # 返回输入文本张量和对应的标签
-    # return {
-    #     'input_ids': inputs['input_ids'].squeeze(),
-    #     'attention_mask': inputs['attention_mask'].squeeze(),
-    #     'labels': torch.tensor(label, dtype=torch.long)
-    # }
+    def __getitem__(self, index):
+        comment = self.data[index]['comment']
+        # label=1 when OFF =TRUE; label=0 when OFF =FALSE
+        off_label = 1 if self.data[index]['OFF'] else 0
+
+        # 使用 tokenizer 对文本进行标记化和编码
+        inputs = self.tokenizer(
+            comment,
+            padding='max_length',
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors='pt'
+        )
+
+        # 返回输入文本张量和对应的标签
+        return {
+            'input_ids': inputs['input_ids'].squeeze(),
+            'attention_mask': inputs['attention_mask'].squeeze(),
+            'labels': torch.tensor(off_label, dtype=torch.long)
+        }
+
+
+def test_KOLDataset():
+    import config
+    args = config.load_args('config/config.yml')
+    dataset = KOLDataset(args, 'train')
+    print(dataset.__getitem__(0))
+
+
+if __name__ == '__main__':
+    test_KOLDataset()
