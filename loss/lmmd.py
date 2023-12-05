@@ -15,13 +15,13 @@ class LMMDLoss(MMDLoss, LambdaSheduler):
         super(MMDLoss, self).__init__(gamma, max_iter, **kwargs)
         self.num_class = num_class
 
-    def forward(self, source, target, source_label, target_logits):
+    def forward(self, source, target, source_label, target_logits, pseudo=False):
         if self.kernel_type == 'linear':
             raise NotImplementedError("Linear kernel is not supported yet.")
 
         elif self.kernel_type == 'rbf':
             batch_size = source.size()[0]
-            weight_ss, weight_tt, weight_st = self.cal_weight(source_label, target_logits)
+            weight_ss, weight_tt, weight_st = self.cal_weight(source_label, target_logits, pseudo)
             weight_ss = torch.from_numpy(weight_ss).cuda()  # B, B
             weight_tt = torch.from_numpy(weight_tt).cuda()
             weight_st = torch.from_numpy(weight_st).cuda()
@@ -43,7 +43,7 @@ class LMMDLoss(MMDLoss, LambdaSheduler):
             loss = loss * lamb
             return loss
 
-    def cal_weight(self, source_label, target_logits):
+    def cal_weight(self, source_label, target_logits, pseudo):
         batch_size = source_label.size()[0]
         source_label = source_label.cpu().data.numpy()
         source_label_onehot = np.eye(self.num_class)[source_label]  # one hot
@@ -52,9 +52,11 @@ class LMMDLoss(MMDLoss, LambdaSheduler):
         source_label_sum[source_label_sum == 0] = 100
         source_label_onehot = source_label_onehot / source_label_sum  # label ratio
 
+        if not pseudo:
+            # true label to tensor
+            target_logits = torch.nn.functional.one_hot(target_logits, num_classes=self.num_class)
         # Pseudo label
         target_label = target_logits.cpu().data.max(1)[1].numpy()
-
         target_logits = target_logits.cpu().data.numpy()
         target_logits_sum = np.sum(target_logits, axis=0).reshape(1, self.num_class)
         target_logits_sum[target_logits_sum == 0] = 100

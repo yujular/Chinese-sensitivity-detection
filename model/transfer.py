@@ -55,14 +55,18 @@ class TransferNet(nn.Module):
         source_clf = self.classifier_layer(source)
         source_clf_loss = self.criterion(source_clf, source_label)
         target_clf = self.classifier_layer(target)
-        target_clf_loss = self.criterion(target_clf, target_label)
+        if target_label is not None:
+            target_clf_loss = self.criterion(target_clf, target_label)
 
         kwargs = {}
         if self.transfer_loss == "lmmd":
             # 目标域无标签时采用预测标签
-            # kwargs['target_logits'] = torch.nn.functional.softmax(target_clf, dim=1)
             kwargs['source_label'] = source_label
-            kwargs['target_logits'] = target_label
+            if target_label is not None:
+                kwargs['target_logits'] = target_label
+            else:
+                kwargs['target_logits'] = torch.nn.functional.softmax(target_clf, dim=1)
+                kwargs['pseudo'] = True
         # elif self.transfer_loss == "daan":
         #     source_clf = self.classifier_layer(source)
         #     kwargs['source_logits'] = torch.nn.functional.softmax(source_clf, dim=1)
@@ -72,7 +76,10 @@ class TransferNet(nn.Module):
         #     tar_clf = self.classifier_layer(target)
         #     target = nn.Softmax(dim=1)(tar_clf)
         transfer_loss = self.adapt_loss(source, target, **kwargs)
-        return source_clf_loss, target_clf_loss, transfer_loss
+        if target_label is not None:
+            return source_clf_loss, target_clf_loss, transfer_loss
+        else:
+            return source_clf_loss, transfer_loss
 
     def predict(self, x):
         input_ids = x['input_ids']
