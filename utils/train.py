@@ -195,6 +195,8 @@ class TransferTrainer(Trainer):
         len_source_loader = len(self.data_loader_source)
         len_target_loader = len(self.data_loader['train'])
         n_batch = min(len_source_loader, len_target_loader)
+        if self.args.train['transfer_loss'] == 'lmmd':
+            n_batch = n_batch - 1
 
         best_model_state_dict, best_dev_f1, global_step = None, 0, 0
         best_epoch = 0
@@ -210,7 +212,7 @@ class TransferTrainer(Trainer):
             # model.epoch_based_processing(n_batch) # daan
             iter_source, iter_target = iter(self.data_loader_source), iter(self.data_loader['train'])
 
-            tqdm_train = tqdm(range(n_batch), ncols=80)
+            tqdm_train = tqdm(range(n_batch), ncols=100)
             for step in tqdm_train:
                 data_source_id, data_source_mask, label_source = next(iter_source).values()
                 data_target_id, data_target_mask, label_target = next(iter_target).values()
@@ -224,9 +226,13 @@ class TransferTrainer(Trainer):
                 data_source = {'input_ids': data_source_id, 'attention_mask': data_source_mask}
                 data_target = {'input_ids': data_target_id, 'attention_mask': data_target_mask}
 
-                source_clf_loss, target_clf_loss, transfer_loss = self.model(data_source, data_target,
-                                                                             label_source, label_target)
-                loss = source_clf_loss + target_clf_loss + self.args.train['transfer_loss_weight'] * transfer_loss
+                if self.args.train['pseudo']:
+                    source_clf_loss, transfer_loss = self.model(data_source, data_target, label_source)
+                    loss = source_clf_loss + self.args.train['transfer_loss_weight'] * transfer_loss
+                else:
+                    source_clf_loss, target_clf_loss, transfer_loss = self.model(data_source, data_target,
+                                                                                 label_source, label_target)
+                    loss = source_clf_loss + target_clf_loss + self.args.train['transfer_loss_weight'] * transfer_loss
 
                 if self.args.train['gradient_accumulation_steps'] > 1:
                     loss = loss / self.args.train['gradient_accumulation_steps']
@@ -240,19 +246,22 @@ class TransferTrainer(Trainer):
                     self.optimizer.step()
                     self.scheduler.step()
 
-                    train_loss_clf.update(target_clf_loss.item())
+                    train_loss_clf.update(source_clf_loss.item())
                     train_loss_transfer.update(transfer_loss.item())
                     train_loss_total.update(loss.item())
 
                     global_step += 1
-                    tqdm_train.set_description('Train loss: {:.6f}'.format(loss.item()), refresh=False)
+                    tqdm_train.set_description('Train loss: {:.6f}, transfer loss: {:.6f}'.format(
+                        loss.item(), transfer_loss.item()), refresh=False)
                     step_log(global_step, loss, self.step_logger)
             # 每个epoch结束后在train和dev上评估
 
             train_accuracy, train_f1 = self._evaluate('train')
             dev_accuracy, dev_f1 = self._evaluate('dev')
 
-            epoch_log(epoch + 1, (train_accuracy, train_f1, dev_accuracy, dev_f1), self.epoch_logger)
+            # eopch log
+            log_data = (train_accuracy, train_f1, dev_accuracy, dev_f1)
+            epoch_log(epoch + 1, log_data, self.epoch_logger)
             tqdm_epoch.set_description(
                 'Epoch: {:d}, train_acc: {:.6f}, train_f1: {:.6f}, '
                 'valid_acc: {:.6f}, valid_f1: {:.6f}, '.format(
@@ -260,6 +269,7 @@ class TransferTrainer(Trainer):
             # 保存模型
             save_path = os.path.join(self.args.train['model_out_path'],
                                      'transfer',
+                                     self.args.train['transfer_dataset'] + '-' + self.args.train['transfer_loss'],
                                      'class-' + str(self.args.dataset['class_num']))
             model_name = self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin'
             save_model(model_dict=self.model.state_dict(), path=save_path, filename=model_name)
