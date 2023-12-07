@@ -1,12 +1,10 @@
 import os
-
 import torch
-from torch.utils.data import DataLoader
 
 from config import load_args
-from dataset import COLDataset
-from model import BertBaseModel
-from utils import Trainer, initRandom
+from dataset import get_dataloader
+from models import BertBaseModel, Model
+from utils import Trainer, initRandom, save_model
 
 MODEL_MAP = {
     'bert-base-linear': BertBaseModel
@@ -22,30 +20,22 @@ if __name__ == '__main__':
 
     print("Loading data...")
     # 创建数据集
-    train_dataset = COLDataset(args, datatype='train')
-    dev_dataset = COLDataset(args, datatype='dev')
-    # test_dataset = COLDataset(args, datatype='test')
-
-    # 创建数据加载器
-    train_loader = DataLoader(train_dataset, batch_size=args.train['batch_size'], shuffle=True)
-    dev_loader = DataLoader(dev_dataset, batch_size=args.train['batch_size'], shuffle=False)
-    # test_loader = DataLoader(test_dataset, batch_size=args.train['batch_size'], shuffle=False)
+    data_loader = get_dataloader(args.dataset['dataset_name'], args, ['train', 'dev'])
 
     # 加载模型
-    # model = MODEL_MAP[args.model['model_type']](args)
-    model = BertBaseModel(args)
+    model = Model(args).get_model()
     model.to(args.train['device'])
     if args.train['device'] == 'cuda' and args.train['n_gpu'] > 1:
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=True)
 
     # 训练模型
-    train_dataloader = {'train': train_loader, 'dev': dev_loader}
-    trainer = Trainer(args, model, train_dataloader)
+
+    trainer = Trainer(args, model, data_loader)
     best_model_state_dict, best_epoch = trainer.train()
     # 保存模型
     print("best epoch: {}".format(best_epoch))
-    torch.save(best_model_state_dict,
-               os.path.join(args.train['model_out_path'],
-                            'class-' + str(args.dataset['class_num']),
-                            args.model['model_name'] + 'model.bin'))
+    model_path = os.path.join(args.train['model_out_path'],
+                              'class-' + str(args.dataset['class_num']))
+    model_name = args.model['model_name'] + 'models.bin'
+    save_model(model_dict=best_model_state_dict, path=model_path, filename=model_name)

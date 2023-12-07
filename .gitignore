@@ -31,9 +31,9 @@ __pycache__/
 *.txt
 
 # 忽略模型文件
-/model/**/config.json
+/models/**/config.json
 *.bin
-/model/**/vocab.txt
+/models/**/vocab.txt
 
 # 忽略Jupyter Notebook生成的文件
 .ipynb_checkpoints/

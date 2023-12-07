@@ -1,7 +1,7 @@
 # 模型全局设置
 model:
-  model_root_path: 'model'
-  model_type: "bert-base-linear"
+  model_root_path: 'models'
+  model_type: "bert-base-cnn"
   model_name: "bert-base-chinese"
   hugging_face: False
   freezing: False
@@ -17,7 +17,7 @@ train:
   n_gpu: 1
 
   # hyperparameters
-  num_epoch: 20
+  num_epoch: 30
   seed: 3407
   batch_size: 32
   gradient_accumulation_steps: 1
@@ -25,26 +25,30 @@ train:
 
   # optimizer
   optimizer: 'AdamW'
-  lr: 2.0e-5
+  lr: 5.0e-5
 
   # scheduler
   scheduler: 'warmuplinear'
-  num_warmup_steps: 200
+  num_warmup_steps: 500
 
   # outputs
   log_path: 'outputs/logger'
-  model_out_path: 'outputs/model'
+  model_out_path: 'outputs/models'
 
   # transfer
   transfer_loss_weight: 0.5
-  transfer_loss: 'mmd'
+  transfer_dataset: 'KOLD'
+  transfer_loss: 'lmmd'
+  pseudo: False
 
 
 # 数据集
 dataset:
+  max_length: 128
   dataset_root_path: 'data'
   dataset_name: "COLDataset"
   OLID_name: "OLID"
+  KOLD_name: "KOLD"
 
   class_num: 2
   multi_class: False
