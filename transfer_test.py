@@ -1,6 +1,6 @@
 from config import load_args
 from dataset import get_dataloader
-from model import get_trained_model
+from models import get_trained_model
 from utils import initRandom, calculate_accuracy_f1, get_prediction, evaluate_subcategory
 
 if __name__ == '__main__':

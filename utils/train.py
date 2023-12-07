@@ -1,8 +1,7 @@
 import gc
 import os
-from copy import deepcopy
-
 import torch
+from copy import deepcopy
 from torch import nn
 from torch.optim import Adam, AdamW
 from tqdm import tqdm, trange
@@ -26,7 +25,7 @@ class Trainer:
                 args.train['lr']: learning rate
                 args.train['num_warmup_steps']: number of warmup steps
                 args.train['scheduler']: scheduler name, 'warmuplinear' or 'warmupconstant'
-            model: model to be evaluated
+            model: models to be evaluated
             data_loader: dict of torch.utils.data.DataLoader, including 'train' and 'dev'
         """
         self.model = model
@@ -44,6 +43,9 @@ class Trainer:
         """
         step_path_name = os.path.join(self.args.train['log_path'], self.args.model['model_name'] + '-step.csv')
         epoch_path_name = os.path.join(self.args.train['log_path'], self.args.model['model_name'] + '-epoch.csv')
+
+        if not os.path.exists(self.args.train['log_path']):
+            os.makedirs(self.args.train['log_path'])
 
         step_logger = get_csv_logger(step_path_name, title='step,loss')
         epoch_logger = get_csv_logger(epoch_path_name, title='epoch,train_acc,train_f1,dev_acc,dev_f1')
@@ -100,17 +102,17 @@ class Trainer:
         return scheduler
 
     def save_model(self, path, filename):
-        """Save model to filename.
+        """Save models to filename.
         Args:
-            :param filename: str, filename to save model
-            :param path: str, path to save model
+            :param filename: str, filename to save models
+            :param path: str, path to save models
         """
         os.makedirs(path, exist_ok=True)
         filename = os.path.join(path, filename)
         torch.save(self.model.state_dict(), filename)
 
     def _evaluate(self, dataset_type):
-        """Evaluate model and get acc and f1 score.
+        """Evaluate models and get acc and f1 score.
         Args:
             dataset_type: str, 'train' or 'dev'
 
@@ -123,10 +125,10 @@ class Trainer:
         return accuracy, f1
 
     def train(self):
-        """Train model on train set and evaluate on train and valid set.
+        """Train models on train set and evaluate on train and valid set.
 
         Returns:
-            state dict of the best model with the highest valid f1 score
+            state dict of the best models with the highest valid f1 score
         """
 
         best_model_state_dict, best_dev_f1, global_step = None, 0, 0
@@ -169,10 +171,11 @@ class Trainer:
                 'valid_acc: {:.6f}, valid_f1: {:.6f}, '.format(
                     epoch, train_accuracy, train_f1, dev_accuracy, dev_f1))
             # 保存模型
-            self.save_model(os.path.join(
+            model_path = os.path.join(
                 self.args.train['model_out_path'],
-                'class-' + str(self.args.dataset['class_num'])),
-                self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin')
+                'class-' + str(self.args.dataset['class_num']))
+            model_name = self.args.model['model_name'] + '-' + str(epoch + 1) + '.bin'
+            save_model(model_dict=self.model.state_dict(), path=model_path, filename=model_name)
 
             if dev_f1 > best_dev_f1:
                 best_model_state_dict = deepcopy(self.model.state_dict())
@@ -209,7 +212,7 @@ class TransferTrainer(Trainer):
             train_loss_transfer = AverageMeter()
             train_loss_total = AverageMeter()
 
-            # model.epoch_based_processing(n_batch) # daan
+            # models.epoch_based_processing(n_batch) # daan
             iter_source, iter_target = iter(self.data_loader_source), iter(self.data_loader['train'])
 
             tqdm_train = tqdm(range(n_batch), ncols=100)
@@ -286,7 +289,7 @@ class TransferTrainer(Trainer):
         return best_model_state_dict, best_epoch
 
     def _evaluate(self, dataset_type):
-        """Evaluate model and get acc and f1 score in target domain.
+        """Evaluate models and get acc and f1 score in target domain.
         Args:
             dataset_type: str, 'train' or 'dev'
         """

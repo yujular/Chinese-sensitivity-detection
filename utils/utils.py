@@ -15,16 +15,16 @@ def initRandom(seed):
 
 
 def load_torch_model(model, model_path, device, strict=True):
-    """Load state dict to model.
+    """Load state dict to models.
 
        Args:
-            :param model: model to be loaded
+            :param model: models to be loaded
             :param model_path: state dict file path
             :param device: device
-            :param strict: whether to strictly load the model
+            :param strict: whether to strictly load the models
 
        Returns:
-           loaded model
+           loaded models
 
     """
     pretrained_model_dict = torch.load(model_path)
@@ -63,12 +63,12 @@ class AverageMeter(object):
 
 
 def save_model(model_dict, path, filename):
-    """Save model to file.
+    """Save models to file.
 
        Args:
-            :param model_dict: model state dict
-            :param path: path to save model
-            :param filename: model file name
+            :param model_dict: models state dict
+            :param path: path to save models
+            :param filename: models file name
 
     """
     # os.makedirs(path, exist_ok=True)

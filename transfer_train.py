@@ -1,11 +1,10 @@
 import os
-
 import torch
 from torch.utils.data import DataLoader
 
 from config import load_args
 from dataset import load_dataset
-from model import TransferNet, get_trained_model
+from models import TransferNet, get_trained_model
 from utils import initRandom, TransferTrainer, save_model
 
 if __name__ == '__main__':
@@ -28,8 +27,8 @@ if __name__ == '__main__':
     transfer_loader = DataLoader(transfer_train, batch_size=args.train['batch_size'], shuffle=True)
 
     # 加载基础模型
-    print("Loading model...")
-    model = get_trained_model(args, transfer=False, pretrained=False)
+    print("Loading models...")
+    model = get_trained_model(args, transfer=False, pretrained=True)
     # 迁移模型
     model.to(args.train['device'])
     trans_model = TransferNet(args, model, transfer_loss=args.train['transfer_loss']).to(args.train['device'])
@@ -52,5 +51,5 @@ if __name__ == '__main__':
                                    'transfer',
                                    args.train['transfer_dataset'] + '-' + args.train['transfer_loss'],
                                    'class-' + str(args.dataset['class_num']))
-    model_save_filename = args.model['model_name'] + 'model.bin'
+    model_save_filename = args.model['model_name'] + 'models.bin'
     save_model(model_dict=best_model_state_dict, path=model_save_path, filename=model_save_filename)

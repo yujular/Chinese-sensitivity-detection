@@ -1,14 +1,16 @@
 import os
+
 import torch
 
-from model.bert import BertBaseModel
-from model.transfer import TransferNet
+from models.bert import BertBaseModel, BertCNNModel
+from models.transfer import TransferNet
 from utils import load_torch_model
 
 
 class Model:
     MODEL_MAP = {
-        'bert-base-linear': BertBaseModel
+        'bert-base-linear': BertBaseModel,
+        'bert-base-cnn': BertCNNModel
     }
 
     def __init__(self, args):
@@ -28,15 +30,15 @@ class Model:
 def get_trained_model(args, transfer=False, pretrained=False):
     """
     :param args:
-    :param transfer: if True, load transfer model
-    :param pretrained: if True, load pretrain model
+    :param transfer: if True, load transfer models
+    :param pretrained: if True, load pretrain models
     :return:
     """
     model = Model(args).get_model()
 
     if transfer:
         model = TransferNet(args, model, transfer_loss=args.train['transfer_loss']).to(args.train['device'])
-        model_name = args.model['model_name'] + 'model.bin'
+        model_name = args.model['model_name'] + 'models.bin'
         model_path = os.path.join(args.train['model_out_path'],
                                   'transfer',
                                   args.train['transfer_dataset'] + '-' + args.train['transfer_loss'],
@@ -45,8 +47,8 @@ def get_trained_model(args, transfer=False, pretrained=False):
     else:
         model_path = os.path.join(args.train['model_out_path'],
                                   'class-' + str(args.dataset['class_num']),
-                                  args.model['model_name'] + 'model.bin')
+                                  args.model['model_name'] + 'models.bin')
     if pretrained:
-        print("Loading model from {}...".format(model_path))
+        print("Loading models from {}...".format(model_path))
         model = load_torch_model(model=model, model_path=model_path, device=args.train['device'], strict=True)
     return model

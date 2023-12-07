@@ -5,13 +5,13 @@ from sklearn import metrics
 from tqdm import tqdm
 
 
-# def get_prediction(model, data_loader, device, class_num) -> tuple[List[str], List[str]]:
+# def get_prediction(models, data_loader, device, class_num) -> tuple[List[str], List[str]]:
 def get_prediction(model, data_loader, device, test=False, transfer=False):
-    """Get model prediction on data_loader in device.
+    """Get models prediction on data_loader in device.
 
     Args:
         :param test: if test, extra return fine-grained-label
-        :param model: model to be evaluate
+        :param model: models to be evaluate
         :param data_loader: data loader
         :param device: device to evaluate
     """
@@ -81,7 +81,7 @@ def calculate_accuracy_f1(
 
     Args:
         :param class_num: number of classes
-        :param predicts: model prediction
+        :param predicts: models prediction
         :param labels: ground truth
         :param average: average method, macro or micro
 
@@ -103,7 +103,7 @@ def evaluate_subcategory(
     Args:
         :param fine_grained_labels: label of fine-grained
         :param class_num: number of classes
-        :param predicts: model prediction
+        :param predicts: models prediction
         :param labels: ground truth
         :param average: average method, macro or micro
 
@@ -136,7 +136,7 @@ def evaluate_subcategory(
 # def test_evaluate():
 #     args = load_args("config/config.yml")
 #     print(args)
-#     model = BertBaseModel(args)
+#     models = BertBaseModel(args)
 #     dev_dataset = COLDataset(args, datatype='dev')
 #     dev_loader = DataLoader(dev_dataset, batch_size=args.train['batch_size'], shuffle=False)
 #
@@ -146,7 +146,7 @@ def evaluate_subcategory(
 #     for i in range(5):
 #         input_ids, input_mask, label = dev_loader.__iter__().__next__().values()
 #         with torch.no_grad():
-#             outs = model(input_ids, input_mask)
+#             outs = models(input_ids, input_mask)
 #         outputs = torch.cat((outputs, outs), dim=0)
 #         labels = torch.cat((labels, label), dim=0)
 #

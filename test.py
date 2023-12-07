@@ -4,8 +4,8 @@ from torch.utils.data import DataLoader
 
 from config import load_args
 from dataset import COLDataset
-from model import Model
-from utils import get_prediction, evaluate_subcategory
+from models import Model
+from utils import get_prediction, evaluate_subcategory, calculate_accuracy_f1
 from utils import load_torch_model, initRandom
 
 if __name__ == '__main__':
@@ -30,14 +30,15 @@ if __name__ == '__main__':
 
     model_path = os.path.join(args.train['model_out_path'],
                               'class-' + str(args.dataset['class_num']),
-                              args.model['model_name'] + 'model.bin')
-    print("Loading model from {}...".format(model_path))
+                              args.model['model_name'] + 'models.bin')
+    print("Loading models from {}...".format(model_path))
     model = load_torch_model(model=model, model_path=model_path, device=args.train['device'], strict=True)
 
     # 开发集预测
-    # ans, label = get_prediction(model, dev_loader, args.train['device'], test=False)
-    # acc, f1 = calculate_accuracy_f1(label, ans, class_num=args.dataset['class_num'])
-    # print("Dev acc: {}, f1: {}".format(acc, f1))
+    ans, label = get_prediction(model, dev_loader, args.train['device'], test=False)
+    acc, f1 = calculate_accuracy_f1(label, ans, class_num=args.dataset['class_num'],
+                                    average='macro' if args.dataset['multi_class'] else 'binary')
+    print("Dev acc: {}, f1: {}".format(acc, f1))
 
     # 测试集预测
     ans, label, fine_grained_label = get_prediction(model, test_loader, args.train['device'], test=True)
