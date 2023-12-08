@@ -49,7 +49,13 @@ def add_input_args(parser):
     # data config
     parser.add_argument('--data_dir', type=str, default='data', help='Data root path.')
     parser.add_argument('--train_data', type=str, default='COLD', help='Training dataset name.')
+    parser.add_argument('--dev_data', type=str, default='COLD', help='Dev dataset name.')
+    parser.add_argument('--test_data', type=str, default='COLD', help='Test dataset name.')
+
     parser.add_argument('--source_data', type=str, default='KOLD', help='Source dataset name.')
+    parser.add_argument('--target_data', type=str, default='COLD', help='Target dataset name.')
+    parser.add_argument('--class_num', type=int, default=2, help='Number of classes.')
+    parser.add_argument('--max_length', type=int, default=128, help='Max length of input sequence.')
 
     # train config
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train.')
@@ -91,3 +97,4 @@ if __name__ == "__main__":
 
     # 使用args中的参数进行你的操作
     print(args)
+    print(args.transfer)
