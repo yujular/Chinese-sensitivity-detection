@@ -12,17 +12,17 @@ class COLDataset(Dataset):
         'region': 1,
         'gender': 2
     }
+    DATA_NAME = 'COLDataset'
 
-    def __init__(self, args, datatype, max_length=128):
+    def __init__(self, root_path, datatype, model_name_or_path, class_num=2, max_length=128):
         """
            COLDataset
            Args:
-                args(`dict`):
-                    config.yml配置参数
-                datatype(`str`):
-                    train, dev, test, train/dev, all
-                max_length(`int`):
-                    token最大长度
+                root_path(`str`): 数据集根目录
+                datatype(`str`): 数据集类型
+                model_name_or_path(`str`): 模型名称或路径, 用于初始化tokenizer
+                class_num(`int`): 类别数量
+                max_length(`int`): 最大长度
 
             Returns:
                 each record: a dict of {input_ids, attention_mask, label}
@@ -34,24 +34,18 @@ class COLDataset(Dataset):
                     标签
         """
 
-        self.args = args
-
-        self.root_path = args.dataset['dataset_root_path']
-        self.dataset_name = args.dataset['dataset_name']
-        self.path = os.path.join(self.root_path, self.dataset_name)
-        self.model = args.model['model_name']
+        self.root_path = root_path
+        self.path = os.path.join(self.root_path, self.DATA_NAME)
+        self.model = model_name_or_path
         self.max_length = max_length
         self.datatype = datatype
+        self.class_num = class_num
 
-        # 加载tokenizer, 自动添加CLS, SEP
-        self.vocab = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'], 'vocab.txt')
-        if self.model == 'bert-base-chinese':
-            model_path = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'])
-            self.tokenizer = BertTokenizerFast.from_pretrained(model_path, add_special_tokens=True, do_lower_case=True,
-                                                               do_basic_tokenize=True)
-        else:
-            # from vocab.txt
-            self.tokenizer = BertTokenizerFast(vocab_file=self.vocab, do_lower_case=True, do_basic_tokenize=True)
+        # 加载tokenizer, 自动添加特殊token
+        self.tokenizer = BertTokenizerFast.from_pretrained(model_name_or_path,
+                                                           add_special_tokens=True,
+                                                           do_lower_case=True,
+                                                           do_basic_tokenize=True)
 
         # 加载数据, train/dev:32157, test: 5323, total: 37480
         self.data = {'topic': [], 'label': [], 'text': [], 'length': 0, 'fine-grained-label': []}
@@ -83,7 +77,7 @@ class COLDataset(Dataset):
         return self.data['length']
 
     def __getitem__(self, index):
-        if not self.args.dataset['multi_class']:
+        if self.class_num == 2:
             label = self.data['label'][index]
         else:
             # topic映射类别
@@ -137,14 +131,11 @@ class COLDataset(Dataset):
 
 def test_COLD_data():
     """ test CLODataset """
-    import config
-    args = config.load_args('config/config.yml')
-
-    data = COLDataset(args, 'all')
-    print(data.get_truncation_num())
-
-    data2 = COLDataset(args, 'test')
-    print(data2.get_truncation_num())
+    cold_dataset = COLDataset('data', 'train',
+                              'models/bert-base-chinese',
+                              2, 128)
+    print(len(cold_dataset))
+    print(cold_dataset.__getitem__(0))
 
 
 if __name__ == '__main__':
