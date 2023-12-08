@@ -12,3 +12,5 @@ get_prediction = evaluate.get_prediction
 calculate_accuracy_f1 = evaluate.calculate_accuracy_f1
 
 save_model = utils.save_model
+
+str2bool = utils.str2bool
