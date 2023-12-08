@@ -2,17 +2,17 @@ import os
 
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
-from transformers import BertTokenizerFast
+
+from dataset.OLD import OLDBase
 
 
-class COLDataset(Dataset):
+class COLDataset(OLDBase):
     TOPIC2LABEL = {
         'race': 0,
         'region': 1,
         'gender': 2
     }
-    DATA_NAME = 'COLDataset'
+    DATA_FOLDER = 'COLDataset'
 
     def __init__(self, root_path, datatype, model_name_or_path, class_num=2, max_length=128):
         """
@@ -33,25 +33,11 @@ class COLDataset(Dataset):
                 labels(`torch.tensor`):
                     标签
         """
-
-        self.root_path = root_path
-        self.path = os.path.join(self.root_path, self.DATA_NAME)
-        self.model = model_name_or_path
-        self.max_length = max_length
-        self.datatype = datatype
-        self.class_num = class_num
-
-        # 加载tokenizer, 自动添加特殊token
-        self.tokenizer = BertTokenizerFast.from_pretrained(model_name_or_path,
-                                                           add_special_tokens=True,
-                                                           do_lower_case=True,
-                                                           do_basic_tokenize=True)
-
-        # 加载数据, train/dev:32157, test: 5323, total: 37480
-        self.data = {'topic': [], 'label': [], 'text': [], 'length': 0, 'fine-grained-label': []}
-        self.load_data(datatype)
+        # train/dev:32157, test: 5323, total: 37480
+        super().__init__(root_path, datatype, model_name_or_path, class_num, max_length)
 
     def load_data(self, datatype):
+        self.data = {'topic': [], 'label': [], 'text': [], 'length': 0, 'fine-grained-label': []}
         if datatype == 'all':
             self._load_data(os.path.join(self.path, 'train.csv'))
             self._load_data(os.path.join(self.path, 'dev.csv'))

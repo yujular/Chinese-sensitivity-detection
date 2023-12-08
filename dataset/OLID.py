@@ -2,26 +2,26 @@ import os
 
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
-from transformers import BertTokenizerFast
+
+from dataset.OLD import OLDBase
 
 
-class OLIDataset(Dataset):
+class OLIDataset(OLDBase):
     LABEL_MAP = {
         'NOT': 0,
         'OFF': 1
     }
+    DATA_FOLDER = 'OLID'
 
-    def __init__(self, args, datatype, max_length=128):
+    def __init__(self, root_path, datatype, model_name_or_path, class_num=2, max_length=128):
         """
            OLIDataset, total: 14,100, train: 13,240, test: 860
            Args:
-                args(`dict`):
-                    config.yml配置参数
-                datatype(`str`):
-                    train, test, train/dev, all
-                max_length(`int`):
-                    token最大长度
+                root_path(`str`): root path of dataset
+                datatype(`str`): train, test, dev
+                model_name_or_path(`str`): model name or path
+                class_num(`int`): number of classes
+                max_length(`int`): max length of input sequence
 
             Returns:
                 each record: a dict of {input_ids, attention_mask, label}
@@ -32,37 +32,20 @@ class OLIDataset(Dataset):
                 labels(`torch.tensor`):
                     label
         """
-        self.args = args
-        self.datatype = datatype
-        self.max_length = max_length
-        self.model = args.model['model_name']
+        super().__init__(root_path, datatype, model_name_or_path, class_num, max_length)
 
-        # 加载tokenizer, 自动添加CLS, SEP
-        self.vocab = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'], 'vocab.txt')
-        if self.model == 'bert-base-chinese':
-            model_path = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'])
-            self.tokenizer = BertTokenizerFast.from_pretrained(model_path, add_special_tokens=True, do_lower_case=True,
-                                                               do_basic_tokenize=True)
-        else:
-            # from vocab.txt
-            self.tokenizer = BertTokenizerFast(vocab_file=self.vocab, do_lower_case=True, do_basic_tokenize=True)
-
-        self.data = self.load_data()
-
-    def load_data(self):
-        path = os.path.join(self.args.dataset['dataset_root_path'],
-                            self.args.dataset['OLID_name'])
+    def load_data(self, datatype):
         if self.datatype == 'train':
             filename = 'olid-training-v1.0.tsv'
-        # else:
-        # filename = ['testset-levela.tsv', 'testset-levelb.tsv', 'testset-levelc.tsv']
-        # TODO
-        dataframe = pd.read_csv(os.path.join(path, filename), sep='\t')
-        data = {'id': dataframe['id'].tolist(), 'tweet': dataframe['tweet'].tolist(),
-                'subtask_a': dataframe['subtask_a'].tolist(), 'subtask_b': dataframe['subtask_b'].tolist(),
-                'subtask_c': dataframe['subtask_c'].tolist(), 'length': len(dataframe['id'].tolist())}
-        print('load data from {} success'.format(filename) + ', length: {}'.format(data['length']))
-        return data
+        else:
+            filename = ''
+            # filename = ['testset-levela.tsv', 'testset-levelb.tsv', 'testset-levelc.tsv']
+            # TODO
+        dataframe = pd.read_csv(os.path.join(self.path, filename), sep='\t')
+        self.data = {'id': dataframe['id'].tolist(), 'tweet': dataframe['tweet'].tolist(),
+                     'subtask_a': dataframe['subtask_a'].tolist(), 'subtask_b': dataframe['subtask_b'].tolist(),
+                     'subtask_c': dataframe['subtask_c'].tolist(), 'length': len(dataframe['id'].tolist())}
+        print('load data from {} success'.format(filename) + ', length: {}'.format(self.data['length']))
 
     def __len__(self):
         return self.data['length']
@@ -83,11 +66,13 @@ class OLIDataset(Dataset):
 
 
 def test_OLID():
-    import config
-    args = config.load_args('config/config.yml')
-
-    dataset = OLIDataset(args, 'train')
-    print(dataset[0])
+    olid_dataset = OLIDataset(root_path='data',
+                              datatype='train',
+                              model_name_or_path='bert-base-chinese',
+                              class_num=2,
+                              max_length=128)
+    print(olid_dataset.__getitem__(0))
+    print(len(olid_dataset))
 
 
 if __name__ == '__main__':

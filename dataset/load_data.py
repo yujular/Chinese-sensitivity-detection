@@ -12,13 +12,20 @@ def load_dataset(dataset_name, args, datatype):
         model_name = args.model
     else:
         model_name = os.path.join(args.model_path, args.model)
+    root_path = args.data_dir
+    class_num = args.class_num
+    max_length = args.max_length
 
     if dataset_name == 'COLD' or dataset_name == 'COLDataset':
-        root_path = args.data_dir
-        class_num = args.class_num
-        max_length = args.max_length
         from dataset.COLD import COLDataset
         dataset = COLDataset(root_path, datatype, model_name, class_num, max_length)
+    elif dataset_name == 'KOLD':
+        from dataset.KOLD import KOLDataset
+        dataset = KOLDataset(root_path, datatype, model_name, class_num, max_length)
+    elif dataset_name == 'OLID':
+        from dataset.OLID import OLIDataset
+        dataset = OLIDataset(root_path, datatype, model_name, class_num, max_length)
+
     else:
         raise NotImplementedError
 

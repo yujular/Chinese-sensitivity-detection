@@ -1,26 +1,28 @@
 import json
-import os
+import os.path
 
 import torch
-from torch.utils.data import Dataset
-from transformers import BertTokenizerFast
+
+from dataset.OLD import OLDBase
 
 
-class KOLDataset(Dataset):
+class KOLDataset(OLDBase):
     TRAIN_LEN = 36386
     DEV_LEN = 2021
     TEST_LEN = 2022
+    DATA_FOLDER = 'KOLD'
+    FILE_NAME = 'kold_v1.json'
 
-    def __init__(self, args, datatype, max_length=128):
+    def __init__(self, root_path, datatype, model_name_or_path, class_num=2, max_length=128):
         """
            KOLDataset, total: 40429, train: 36386, dev: 2021, test: 2022
            Args:
-                args(`dict`):
-                    config.yml配置参数
-                datatype(`str`):
-                    train, dev, test, train/dev, all
-                max_length(`int`):
-                    token最大长度
+                root_path(`str`): 数据集根目录
+                datatype(`str`): 数据集类型
+                model_name_or_path(`str`): 模型名称或路径, 用于初始化tokenizer
+                class_num(`int`): 类别数量
+                max_length(`int`): 最大长度
+
 
             Returns:
                 each record: a dict of {input_ids, attention_mask, label}
@@ -31,33 +33,11 @@ class KOLDataset(Dataset):
                 labels(`torch.tensor`):
                     标签
         """
+        super(KOLDataset, self).__init__(root_path, datatype, model_name_or_path, class_num, max_length)
 
-        self.args = args
-
-        self.path = os.path.join(args.dataset['dataset_root_path'], args.dataset['KOLD_name'])
-        self.dataset_name = 'kold_v1.json'
-
-        self.path = os.path.join(self.path, self.dataset_name)
-        self.model = args.model['model_name']
-        self.max_length = max_length
-
-        # 加载tokenizer, 自动添加CLS, SEP
-        self.vocab = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'], 'vocab.txt')
-        if self.model == 'bert-base-chinese':
-            model_path = os.path.join(self.args.model['model_root_path'], self.args.model['model_name'])
-            self.tokenizer = BertTokenizerFast.from_pretrained(model_path, add_special_tokens=True, do_lower_case=True,
-                                                               do_basic_tokenize=True)
-        else:
-            # from vocab.txt
-            self.tokenizer = BertTokenizerFast(vocab_file=self.vocab, do_lower_case=True, do_basic_tokenize=True)
-
-        # 加载数据
-        self.data = []
-        self.load_json_data(datatype)
-
-    def load_json_data(self, datatype):
+    def load_data(self, datatype):
         # 从Json文件加载数据
-        with open(self.path, 'r', encoding='utf-8') as f:
+        with open(os.path.join(self.path, self.FILE_NAME), 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         if datatype == 'all':
@@ -102,10 +82,13 @@ class KOLDataset(Dataset):
 
 
 def test_KOLDataset():
-    import config
-    args = config.load_args('config/config.yml')
-    dataset = KOLDataset(args, 'train')
-    print(dataset.__getitem__(0))
+    kold_dataset = KOLDataset(root_path='data',
+                              datatype='all',
+                              model_name_or_path='bert-base-chinese',
+                              class_num=2,
+                              max_length=128)
+    print(len(kold_dataset))
+    print(kold_dataset.__getitem__(0))
 
 
 if __name__ == '__main__':
