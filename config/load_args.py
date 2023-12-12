@@ -1,34 +1,9 @@
+import os
+
 import configargparse
 import torch.cuda
-import yaml
 
-from utils import str2bool
-
-
-def load_args(config_file):
-    # 从config.yml文件中加载参数
-    with open(config_file, 'r', encoding='utf-8') as config_stream:
-        config = yaml.safe_load(config_stream)
-
-    if torch.cuda.is_available():
-        config['train']['device'] = 'cuda'
-        config['train']['n_gpu'] = torch.cuda.device_count()
-    else:
-        config['train']['device'] = 'cpu'
-        config['train']['n_gpu'] = 0
-
-    # 创建一个ArgumentParser对象
-    parser = argparse.ArgumentParser(description='Args base on config.yml')
-
-    # 遍历配置文件中的参数并添加到解析器中
-    for key, value in config.items():
-        # 如果value是列表，则将其转换为字符串
-        if isinstance(value, list):
-            value = ','.join(value)
-        parser.add_argument(f'--{key}', default=value)
-
-    # 解析命令行参数并返回
-    return parser.parse_args()
+from utils.utils import str2bool
 
 
 def add_input_args(parser):
@@ -38,10 +13,12 @@ def add_input_args(parser):
 
     # model config
     parser.add_argument('--transfer', type=str2bool, default=False, help='Whether to use transfer learning.')
-    parser.add_argument('--pretrained', type=str2bool, default=False, help='Whether to use pretrained model.')
+    parser.add_argument('--pretrained', type=str2bool, default=False,
+                        help='Whether to use pretrained model for transfer.')
     parser.add_argument('--model_path', type=str, default='models', help='Model root path.')
     parser.add_argument('--model', '-m', type=str, default='bert-base-chinese', help='backbone network')
-    parser.add_argument('--cls', '-c', type=str, default='linear', help='classifier')
+    parser.add_argument('--hidden_size', type=int, default=768, help='hidden size of backbone network')
+    parser.add_argument('--bottleneck', '-b', type=str, default='cnn', help='bottleneck network')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='dropout rate')
     parser.add_argument('--hugging_face', type=str2bool, default=False,
                         help='whether to use hugging face to load models')
@@ -63,6 +40,7 @@ def add_input_args(parser):
     parser.add_argument('--freeze', type=str2bool, default=False, help='Freeze the encoder weights.')
     parser.add_argument('--clip_grad', type=str2bool, default=False, help='Clip the gradient norm.')
     parser.add_argument('--max_grad_norm', type=float, default=1.0e-3, help='Max gradient norm.')
+    parser.add_argument('--save_epoch_model', type=str2bool, default=True, help='Save model per epoch.')
 
     # optimizer config
     parser.add_argument('--optimizer', '-o', type=str, default='AdamW', help='Optimizer.')
@@ -71,6 +49,21 @@ def add_input_args(parser):
     # scheduler config
     parser.add_argument('--scheduler', '-s', type=str, default='warmuplinear', help='Scheduler.')
     parser.add_argument('--warmup_steps', type=int, default=500, help='Warm up steps.')
+    parser.add_argument('--num_warmup_steps', type=int, default=500, help='Number of warm up steps.')
+
+    # transfer config
+    parser.add_argument('--transfer_loss', type=str, default='mmd', help='Transfer loss.')
+    parser.add_argument('--use_bottleneck', type=str2bool, default=True, help='Use bottleneck(Transfer Net).')
+    parser.add_argument('--bottleneck_width', type=int, default=256, help='Bottleneck width.')
+    parser.add_argument('--max_iter', type=int, default=1000, help='Max iteration.')
+    parser.add_argument('--transfer_loss_weight', type=float, default=0.5, help='Transfer loss weight.')
+    parser.add_argument('--source_cls_weight', type=float, default=1.0, help='Source classification loss weight.')
+    parser.add_argument('--pseudo', type=str2bool, default=False, help='Use pseudo label.')
+
+    # outputs config
+    parser.add_argument('--output_dir', type=str, default='outputs', help='Output root path.')
+    parser.add_argument('--model_out_path', type=str, default='model', help='Model output path.')
+    parser.add_argument('--log_path', type=str, default='logger', help='Log output path.')
 
 
 def get_parser():
@@ -88,6 +81,11 @@ def get_parser():
     # device setting
     setattr(parser_args, 'device', 'cuda' if torch.cuda.is_available() else 'cpu')
     setattr(parser_args, 'n_gpu', torch.cuda.device_count())
+
+    if parser_args.device == 'cuda' and parser_args.n_gpu > 1:
+        local_rank = int(os.environ["LOCAL_RANK"])
+        setattr(parser_args, 'device', f'cuda:{local_rank}')
+
     return parser_args
 
 
