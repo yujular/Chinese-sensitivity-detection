@@ -5,13 +5,12 @@ from loss import TransferLoss
 
 
 class TransferNet(nn.Module):
-    def __init__(self, args, base_net,
+    def __init__(self, base_net, class_num=2,
                  transfer_loss='mmd', use_bottleneck=True,
                  bottleneck_width=256, max_iter=1000):
         super(TransferNet, self).__init__()
 
-        self.args = args
-        self.class_num = self.args.dataset['class_num']
+        self.class_num = class_num
         self.base_net = base_net
         self.transfer_loss = transfer_loss
         self.use_bottleneck = use_bottleneck
@@ -40,13 +39,9 @@ class TransferNet(nn.Module):
         self.adapt_loss = TransferLoss(**transfer_loss_args)
 
     def forward(self, source, target, source_label, target_label=None):
-        source_id = source['input_ids']
-        source_mask = source['attention_mask']
-        target_id = target['input_ids']
-        target_mask = target['attention_mask']
 
-        source = self.base_net.get_cls_feature(source_id, source_mask)
-        target = self.base_net.get_cls_feature(target_id, target_mask)
+        source = self.base_net.get_cls_feature(source)
+        target = self.base_net.get_cls_feature(target)
 
         if self.use_bottleneck:
             source = self.bottleneck_layer(source)
@@ -82,10 +77,7 @@ class TransferNet(nn.Module):
             return source_clf_loss, transfer_loss
 
     def predict(self, x):
-        input_ids = x['input_ids']
-        attention_mask = x['attention_mask']
-
-        features = self.base_net.get_cls_feature(input_ids, attention_mask)
+        features = self.base_net.get_cls_feature(x)
         if self.use_bottleneck:
             features = self.bottleneck_layer(features)
         clf = self.classifier_layer(features)

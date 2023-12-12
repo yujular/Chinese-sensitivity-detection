@@ -8,8 +8,6 @@ def epoch_log(epoch, data, logger):
         data: dict, including 'acc', 'f1'
         logger: logger object
     """
-    train_acc, train_f1, dev_acc, dev_f1 = data
-
     # Logging
     logger.info(','.join([str(epoch)] + [str(s) for s in data]))
 

@@ -3,33 +3,39 @@ from torch.nn import functional as F
 
 
 class CNNAdapter(nn.Module):
-    def __init__(self, args):
+    def __init__(self, max_length, hidden_size, dropout_rate=0.1):
+        """
+        CNN Adapter, input shape: (N, 1, max_length, hidden_size)
+        :param max_length: max length of token sequence
+        :param hidden_size: hidden size of bert model
+        :param dropout_rate: dropout rate
+        """
         super(CNNAdapter, self).__init__()
-        self.args = args
-        self.class_num = self.args.dataset['class_num']
 
-        self.input_length = self.args.dataset['max_length']
-        self.input_width = self.args.model['hidden_size']
+        self.input_length = max_length
+        self.input_width = hidden_size
+        self.dropout_rate = dropout_rate
 
         self.layer_norm = nn.LayerNorm([self.input_length, self.input_width])
 
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=512, kernel_size=1, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=256, kernel_size=1, padding=1)
         self.avg_pool1 = nn.AvgPool2d((2, 2))
-        self.conv2 = nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1)
         self.avg_pool2 = nn.AvgPool2d((2, 2))
-        self.conv3 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1)
         self.avg_pool3 = nn.AvgPool2d((2, 2))
 
         self.extra = nn.Sequential(
-            nn.Conv2d(1, 128, kernel_size=(1, 1), stride=8, padding=0),
-            nn.BatchNorm2d(128)
+            nn.Conv2d(1, 64, kernel_size=(1, 1), stride=8, padding=0),
+            nn.BatchNorm2d(64)
         )
 
         self.max_pool = nn.AdaptiveMaxPool2d((1, 1))
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        self.dropout = nn.Dropout(self.args.model['dropout_rate'])
-        self.bn = nn.BatchNorm1d(128)
+        self.dropout = nn.Dropout(self.dropout_rate)
+        self.bn = nn.BatchNorm1d(64)
+        self.num_features = self.feature_num()
 
     def forward(self, x):
         # (N,l,d)

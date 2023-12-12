@@ -1,9 +1,9 @@
 import os
+
 import torch.nn.functional as F
 from torch import nn
-from transformers import BertModel
+from transformers import BertModel, XLMRobertaModel
 
-from dataset import get_dataloader
 from models.cnnmodel import CNNAdapter
 
 
@@ -163,23 +163,64 @@ class BertCNNModel(nn.Module):
         return cnn_out
 
 
-def test_BERTCNN():
-    import config
-    args = config.load_args('config/config.yml')
+class BertGenericModel(nn.Module):
+    def __init__(self, bert_path_name, bottleneck=None, class_num=2, using_cls=False, freezing=False):
+        super(BertGenericModel, self).__init__()
 
-    data_loader = get_dataloader('COLD', args, ['train'])
+        self.bert_path_name = bert_path_name
 
-    iter_source = iter(data_loader['train'])
-    data_source_id, data_source_mask, label_source = next(iter_source).values()
-    data_source_id, data_source_mask, label_source = (data_source_id.to(args.train['device']),
-                                                      data_source_mask.to(args.train['device']),
-                                                      label_source.to(args.train['device']))
+        self.class_num = class_num
+        self.freezing = freezing
+        self.using_cls = using_cls
 
-    model = BertCNNModel(args).to(args.train['device'])
-    out = model(data_source_id, data_source_mask)
-    print(out)
+        # 加载BERT网络
+        if 'bert-base-chinese' in bert_path_name:
+            self.bert = BertModel.from_pretrained(bert_path_name)
+        elif 'xlm-roberta' in bert_path_name:
+            self.bert = XLMRobertaModel.from_pretrained(bert_path_name)
+        # 是否解冻预训练BERT
+        if self.freezing:
+            for param in self.bert.parameters():
+                param.requires_grad = False
+        else:
+            for param in self.bert.parameters():
+                param.requires_grad = True
+
+        self.cls_model = bottleneck
+        self.fc = nn.Linear(self.cls_model.num_features, self.class_num)
+
+    def forward(self, inputs):
+        cls_out = self.get_cls_feature(inputs)
+        logits = self.fc(cls_out)
+        outs = F.softmax(logits, dim=-1)
+        return outs
+
+    def feature_num(self):
+        if self.cls_model is not None:
+            return self.cls_model.num_features
+        else:
+            return self.bert.config.hidden_size
+
+    def get_cls_feature(self, inputs):
+        """Get cls feature for visualization.
+
+        Args:
+            inputs: (batch_size, max_seq_len)
+        """
+        bert_output = self.bert(
+            inputs['input_ids'],
+            attention_mask=inputs['attention_mask'],
+            encoder_hidden_states=False)
+        if self.using_cls:
+            # (N, hidden_size): (N,768)
+            bert_out = bert_output[1]
+        else:
+            # (N, sequence_length, hidden_size): (N, 128, 768)
+            bert_out = bert_output[0]
+
+        cls_out = self.cls_model(bert_out)
+        return cls_out
 
 
 if __name__ == '__main__':
-    test_BERTCNN()
-    print(2)
+    print(1)

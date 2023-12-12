@@ -38,7 +38,7 @@ class OLIDataset(OLDBase):
         if self.datatype == 'train':
             filename = 'olid-training-v1.0.tsv'
         else:
-            filename = ''
+            filename = 'olid-training-v1.0.tsv'
             # filename = ['testset-levela.tsv', 'testset-levelb.tsv', 'testset-levelc.tsv']
             # TODO
         dataframe = pd.read_csv(os.path.join(self.path, filename), sep='\t')
