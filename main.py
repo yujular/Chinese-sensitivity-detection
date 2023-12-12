@@ -12,8 +12,10 @@ if __name__ == '__main__':
     # 训练模型
     trainer = Trainer(args)
 
-    best_epoch = trainer.train()
-    print("Best epoch: {}".format(best_epoch))
-    trainer.test()
+    if args.train:
+        best_epoch = trainer.train()
+        print("Best epoch: {}".format(best_epoch))
+    if args.test:
+        trainer.test()
 
     # os.system("/usr/bin/shutdown")
