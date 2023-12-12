@@ -66,6 +66,7 @@ def add_input_args(parser):
     parser.add_argument('--output_dir', type=str, default='outputs', help='Output root path.')
     parser.add_argument('--model_out_path', type=str, default='model', help='Model output path.')
     parser.add_argument('--log_path', type=str, default='logger', help='Log output path.')
+    parser.add_argument('--plot_path', type=str, default='plot', help='Plot output path.')
 
 
 def get_parser():

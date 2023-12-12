@@ -1,5 +1,6 @@
 from . import evaluate
 from . import logger
+from . import plot
 from . import utils
 
 # evaluate
@@ -19,3 +20,6 @@ initRandom = utils.initRandom
 epoch_log = logger.epoch_log
 step_log = logger.step_log
 get_csv_logger = logger.get_csv_logger
+
+# plot
+plot_confusion_matrix = plot.plot_confusion_matrix

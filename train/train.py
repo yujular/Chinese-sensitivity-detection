@@ -11,7 +11,7 @@ from transformers import get_linear_schedule_with_warmup, get_constant_schedule_
 from dataset import get_dataloaders
 from models import Model
 from utils import get_prediction, calculate_accuracy_f1, get_trans_prediction, evaluate_subcategory
-from utils import step_log, get_csv_logger, epoch_log
+from utils import step_log, get_csv_logger, plot_confusion_matrix
 
 
 class Trainer:
@@ -256,6 +256,10 @@ class Trainer:
         acc, f1 = calculate_accuracy_f1(label, ans, class_num=self.args.class_num,
                                         average='macro' if self.args.class_num > 2 else None)
         print("Dev acc: {}, f1: {}".format(acc, f1))
+        plot_path = os.path.join(self.args.output_dir,
+                                 self.args.plot_path)
+        plot_confusion_matrix(label, ans, title='Dev Confusion Matrix',
+                              normalize=True, save_path=plot_path)
         # 测试集预测
         ans, label, fine_grained_label = get_prediction(self.model, self.data_loader['test'],
                                                         self.args.device, test=True,
@@ -267,4 +271,6 @@ class Trainer:
             "Test acc: {}, f1: {},\n acc_I: {}, f1_I: {},\n acc_G: {}, f1_G: {},\n acc_anti: {}, f1_anti: {},"
             "\n acc_non_offen:{}, f1_non_offen: {}\n".format(*test_evaluate)
         )
+        plot_confusion_matrix(label, ans, title='Test Confusion Matrix',
+                              normalize=True, save_path=plot_path)
         print('--------------------end----------------')
