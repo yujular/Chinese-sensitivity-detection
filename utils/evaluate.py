@@ -34,7 +34,8 @@ def get_prediction(model, data_loader, device, test=False, transfer=False):
             if transfer:
                 outs = model.predict({'input_ids': input_ids, 'attention_mask': input_mask})
             else:
-                outs = model(input_ids, input_mask)
+                outs = model({'input_ids': input_ids, 'attention_mask': input_mask})
+
         outputs = torch.cat((outputs, outs), dim=0)
         labels = torch.cat((labels, label), dim=0)
 
@@ -111,7 +112,7 @@ def evaluate_subcategory(
         accuracy, f1 score
 
     """
-    f1, acc = calculate_accuracy_f1(labels, predicts, class_num, average)
+    acc, f1 = calculate_accuracy_f1(labels, predicts, class_num, average)
     att_I_predicts, att_I_labels, att_G_predicts, att_G_labels = [], [], [], []
     anti_predicts, anti_labels, non_offen_predicts, non_offen_labels = [], [], [], []
     for i in range(len(fine_grained_labels)):
