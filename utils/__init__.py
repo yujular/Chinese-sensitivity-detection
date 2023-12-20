@@ -15,6 +15,7 @@ str2bool = utils.str2bool
 AverageMeter = utils.AverageMeter
 load_torch_model = utils.load_torch_model
 initRandom = utils.initRandom
+calculate_average_std = utils.calculate_average_std
 
 # logger
 epoch_log = logger.epoch_log
