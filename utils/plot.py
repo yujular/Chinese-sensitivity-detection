@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -63,13 +65,15 @@ def plot_confusion_matrix(true_labels, predicted_labels, title='Confusion Matrix
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
 
-    # Display the plot
-    plt.show()
-
     # Save the plot
     if save_path is not None:
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
         file_name = slugify(title) + '.png'
         plt.savefig(os.path.join(save_path, file_name))
+
+    # Display the plot
+    plt.show()
 
 
 def test_plot():
