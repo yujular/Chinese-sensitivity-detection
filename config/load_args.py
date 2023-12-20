@@ -9,8 +9,9 @@ from utils.utils import str2bool
 def add_input_args(parser):
     # global config
     parser.add_argument('--seed', type=int, default=3407, help='Random seed.')
+    parser.add_argument('--random_num', type=int, default=1, help='Random number.')
     parser.add_argument('--num_workers', type=int, default=0)
-    parser.add_argument('train', type=str2bool, default=True, help='Train model or not.')
+    parser.add_argument('--train', type=str2bool, default=True, help='Train model or not.')
     parser.add_argument('--test', type=str2bool, default=True, help='Test model or not.')
 
     # model config

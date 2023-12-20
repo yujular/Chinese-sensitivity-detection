@@ -10,7 +10,7 @@ from transformers import get_linear_schedule_with_warmup, get_constant_schedule_
 
 from dataset import get_dataloaders
 from models import Model
-from utils import get_prediction, calculate_accuracy_f1, get_trans_prediction, evaluate_subcategory
+from utils import get_prediction, calculate_accuracy_f1, get_trans_prediction, evaluate_subcategory, epoch_log
 from utils import step_log, get_csv_logger, plot_confusion_matrix
 
 
@@ -124,7 +124,7 @@ class Trainer:
         else:
             predictions, labels = get_prediction(model=self.model, data_loader=self.data_loader[dataset_type],
                                                  device=self.args.device)
-        accuracy, f1 = calculate_accuracy_f1(labels, predictions, class_num=self.args.class_num)
+        accuracy, f1 = calculate_accuracy_f1(labels, predictions, class_num=self.args.class_num, average='macro')
         return accuracy, f1
 
     def _save_model(self, path, filename):
@@ -200,7 +200,6 @@ class Trainer:
                 self.scheduler.step()
                 global_step += 1
                 if self.args.transfer:
-
                     tqdm_train.set_description('Train loss: {:.6f}, transfer loss: {:.6f}'.format(
                         loss.item(), transfer_loss.item()), refresh=False)
                 else:
@@ -267,10 +266,20 @@ class Trainer:
         test_evaluate = evaluate_subcategory(label, ans, fine_grained_label,
                                              class_num=self.args.class_num,
                                              average='macro' if self.args.class_num > 2 else None)
-        print(
-            "Test acc: {}, f1: {},\n acc_I: {}, f1_I: {},\n acc_G: {}, f1_G: {},\n acc_anti: {}, f1_anti: {},"
-            "\n acc_non_offen:{}, f1_non_offen: {}\n".format(*test_evaluate)
-        )
+        if self.args.class_num == 2:
+            print(
+                "Test acc: {}, f1: {}, offense acc: {}, f1: {}; non-offense acc: {}, f1: {};\n"
+                "acc_I: {}, acc_G: {}, acc_anti: {}, acc_non_offen: {}".format(
+                    test_evaluate['acc'], test_evaluate['f1'], test_evaluate['acc_offen'], test_evaluate['f1_offen'],
+                    test_evaluate['acc_non_offen'], test_evaluate['f1_non_offen'], test_evaluate['acc_I'],
+                    test_evaluate['acc_G'], test_evaluate['acc_anti'], test_evaluate['acc_non_offen']))
+        else:
+            print("Test acc: {}, f1: {}\n"
+                  "acc_I: {}, acc_G: {}, acc_anti: {}, acc_non_offen: {}"
+                  .format(test_evaluate['acc'], test_evaluate['f1'],
+                          test_evaluate['acc_I'], test_evaluate['acc_G'],
+                          test_evaluate['acc_anti'], test_evaluate['acc_non_offen']))
+
         plot_confusion_matrix(label, ans, title='Test Confusion Matrix',
                               normalize=True, save_path=plot_path)
-        print('--------------------end----------------')
+        return test_evaluate

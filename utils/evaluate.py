@@ -77,7 +77,7 @@ def get_trans_prediction(model, data_loader, device, test=False):
 
 
 def calculate_accuracy_f1(
-        labels: List[str], predicts: List[str], class_num=2, average='binary') -> tuple:
+        labels: List[str], predicts: List[str], class_num=2, average='binary', pos_label=1) -> tuple:
     """Calculate accuracy and f1 score.
 
     Args:
@@ -94,11 +94,31 @@ def calculate_accuracy_f1(
     return metrics.accuracy_score(labels, predicts), \
         metrics.f1_score(
             labels, predicts,
-            labels=LABELS, average=average)
+            labels=LABELS, average=average, pos_label=pos_label)
+
+
+def calculate_precision_recall(labels: List[str], predicts: List[str], class_num=2, average='binary',
+                               pos_label=1) -> tuple:
+    """Calculate precision and recall.
+
+    Args:
+        :param class_num: number of classes
+        :param predicts: models prediction
+        :param labels: ground truth
+        :param average: average method, macro or micro
+
+    Returns:
+        accuracy, f1 score
+
+    """
+    LABELS = [str(i) for i in range(class_num)]
+    return metrics.precision_score(labels, predicts, labels=LABELS, average=average, pos_label=pos_label), \
+        metrics.recall_score(labels, predicts, labels=LABELS, average=average, pos_label=pos_label)
 
 
 def evaluate_subcategory(
-        labels: List[str], predicts: List[str], fine_grained_labels: List[str], class_num=2, average='macro') -> tuple:
+        labels: List[str], predicts: List[str], fine_grained_labels: List[str],
+        class_num=2, average='macro'):
     """Calculate accuracy and f1 score.
 
     Args:
@@ -109,10 +129,28 @@ def evaluate_subcategory(
         :param average: average method, macro or micro
 
     Returns:
-        accuracy, f1 score
+        accuracy, f1 score, precision, recall
 
     """
-    acc, f1 = calculate_accuracy_f1(labels, predicts, class_num, average)
+
+    if class_num == 2:
+        ans = {'acc': (calculate_accuracy_f1(labels, predicts, class_num, 'macro'))[0],
+               'f1': (calculate_accuracy_f1(labels, predicts, class_num, 'macro'))[1],
+               'pre': (calculate_precision_recall(labels, predicts, class_num, 'macro'))[0],
+               'rec': (calculate_precision_recall(labels, predicts, class_num, 'macro'))[1],
+               'acc_offen': (calculate_accuracy_f1(labels, predicts, class_num, 'binary', 1))[0],
+               'f1_offen': (calculate_accuracy_f1(labels, predicts, class_num, 'binary', 1))[1],
+               'pre_offen': (calculate_precision_recall(labels, predicts, class_num, 'binary', 1))[0],
+               'rec_offen': (calculate_precision_recall(labels, predicts, class_num, 'binary', 1))[1],
+               'acc_non_offen': (calculate_accuracy_f1(labels, predicts, class_num, 'binary', 0))[0],
+               'f1_non_offen': (calculate_accuracy_f1(labels, predicts, class_num, 'binary', 0))[1],
+               'pre_non_offen': (calculate_precision_recall(labels, predicts, class_num, 'binary', 0))[0],
+               'rec_non_offen': (calculate_precision_recall(labels, predicts, class_num, 'binary', 0))[1]}
+    else:
+        ans = {'acc': (calculate_accuracy_f1(labels, predicts, class_num, average))[0],
+               'f1': (calculate_accuracy_f1(labels, predicts, class_num, average))[1],
+               'pre': (calculate_precision_recall(labels, predicts, class_num, average))[0],
+               'rec': (calculate_precision_recall(labels, predicts, class_num, average))[1]}
     att_I_predicts, att_I_labels, att_G_predicts, att_G_labels = [], [], [], []
     anti_predicts, anti_labels, non_offen_predicts, non_offen_labels = [], [], [], []
     for i in range(len(fine_grained_labels)):
@@ -128,11 +166,12 @@ def evaluate_subcategory(
         elif fine_grained_labels[i] == 0:
             non_offen_predicts.append(predicts[i])
             non_offen_labels.append(labels[i])
-    acc_I, f1_I = calculate_accuracy_f1(att_I_labels, att_I_predicts, class_num, average)
-    acc_G, f1_G = calculate_accuracy_f1(att_G_labels, att_G_predicts, class_num, average)
-    acc_anti, f1_anti = calculate_accuracy_f1(anti_labels, anti_predicts, class_num, average)
-    acc_non_offen, f1_non_offen = calculate_accuracy_f1(non_offen_labels, non_offen_predicts, class_num, average)
-    return acc, f1, acc_I, f1_I, acc_G, f1_G, acc_anti, f1_anti, acc_non_offen, f1_non_offen
+
+    ans['acc_I'] = (calculate_accuracy_f1(att_I_labels, att_I_predicts, class_num, average))[0]
+    ans['acc_G'] = (calculate_accuracy_f1(att_G_labels, att_G_predicts, class_num, average))[0]
+    ans['acc_anti'] = (calculate_accuracy_f1(anti_labels, anti_predicts, class_num, average))[0]
+    ans['acc_non_offen'] = (calculate_accuracy_f1(non_offen_labels, non_offen_predicts, class_num, average))[0]
+    return ans
 
 # def test_evaluate():
 #     args = load_args("config/config.yml")

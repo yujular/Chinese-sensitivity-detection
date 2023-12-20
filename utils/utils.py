@@ -86,3 +86,24 @@ def str2bool(v):
         return False
     else:
         raise ValueError('Boolean value expected.')
+
+
+def calculate_average_std(result_list):
+    """Calculate average and std of a list.
+
+       Args:
+            :param result_list: list to be calculated
+
+       Returns:
+           average and std of the list
+
+    """
+    keys = set(key for data in result_list for key in data.keys())
+
+    result = {}
+    for key in keys:
+        values = [data[key] for data in result_list if key in data]
+        mean = np.mean(values)
+        std = np.std(values)
+        result[key] = {"mean": mean, "std": std}
+    return result
