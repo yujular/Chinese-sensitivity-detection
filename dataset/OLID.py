@@ -35,13 +35,19 @@ class OLIDataset(OLDBase):
         super().__init__(root_path, datatype, model_name_or_path, class_num, max_length)
 
     def load_data(self, datatype):
-        if self.datatype == 'train':
+        if self.datatype == 'train' or self.datatype == 'dev':
             filename = 'olid-training-v1.0.tsv'
         else:
             filename = 'olid-training-v1.0.tsv'
             # filename = ['testset-levela.tsv', 'testset-levelb.tsv', 'testset-levelc.tsv']
             # TODO
         dataframe = pd.read_csv(os.path.join(self.path, filename), sep='\t')
+        # total:13420, train: 12000, dev: 1420
+        if self.datatype == 'tran':
+            dataframe = dataframe[:12000]
+        elif self.datatype == 'dev':
+            dataframe = dataframe[12000:]
+
         self.data = {'id': dataframe['id'].tolist(), 'tweet': dataframe['tweet'].tolist(),
                      'subtask_a': dataframe['subtask_a'].tolist(), 'subtask_b': dataframe['subtask_b'].tolist(),
                      'subtask_c': dataframe['subtask_c'].tolist(), 'length': len(dataframe['id'].tolist())}
