@@ -25,7 +25,9 @@ def load_dataset(dataset_name, args, datatype):
     elif dataset_name == 'OLID':
         from dataset.OLID import OLIDataset
         dataset = OLIDataset(root_path, datatype, model_name, class_num, max_length)
-
+    elif dataset_name == 'ProsCons':
+        from dataset.ProsCons import ProsCons
+        dataset = ProsCons(root_path, datatype, model_name, class_num, max_length)
     else:
         raise NotImplementedError
 
