@@ -2,7 +2,7 @@ import abc
 import os
 
 from torch.utils.data import Dataset
-from transformers import BertTokenizerFast, XLMRobertaTokenizerFast
+from transformers import AutoTokenizer
 
 
 class OLDBase(Dataset):
@@ -17,16 +17,21 @@ class OLDBase(Dataset):
         self.model = model_name_or_path
 
         # 加载tokenizer, 自动添加CLS, SEP
-        if 'bert-base-chinese' in self.model:
-            self.tokenizer = BertTokenizerFast.from_pretrained(self.model,
-                                                               add_special_tokens=True,
-                                                               do_lower_case=True,
-                                                               do_basic_tokenize=True)
-        elif 'xlm-roberta' in self.model:
-            self.tokenizer = XLMRobertaTokenizerFast.from_pretrained(self.model,
-                                                                     add_special_tokens=True,
-                                                                     do_lower_case=True,
-                                                                     do_basic_tokenize=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model,
+                                                       add_special_tokens=True,
+                                                       do_lower_case=True,
+                                                       do_basic_tokenize=True,
+                                                       use_fast=True)
+        # if 'bert-base-chinese' in self.model:
+        #     self.tokenizer = BertTokenizerFast.from_pretrained(self.model,
+        #                                                        add_special_tokens=True,
+        #                                                        do_lower_case=True,
+        #                                                        do_basic_tokenize=True)
+        # elif 'xlm-roberta' in self.model:
+        #     self.tokenizer = XLMRobertaTokenizerFast.from_pretrained(self.model,
+        #                                                              add_special_tokens=True,
+        #                                                              do_lower_case=True,
+        #                                                              do_basic_tokenize=True)
         self.data = {}
         self.load_data(self.datatype)
 
